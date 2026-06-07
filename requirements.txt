@@ -1,0 +1,10 @@
+gradio>=4.40.0
+spaces
+transformers>=4.44.0
+torch>=2.0.0
+accelerate>=0.30.0
+Pillow>=10.0.0
+numpy>=1.24.0
+soundfile
+faster-whisper>=1.0.0
+kokoro>=0.9.2

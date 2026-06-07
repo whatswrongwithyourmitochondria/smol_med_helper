@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.pyc
+.gradio/
+data/logs/
+models/
+finetune/data/
+finetune/output/
+.venv/
+
+# Dev screenshots + throwaway scripts
+ui_*.png
+take_shots.py
+test.py
