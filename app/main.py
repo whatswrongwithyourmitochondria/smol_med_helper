@@ -373,7 +373,7 @@ THEME = gr.themes.Base(
     font_mono=gr.themes.GoogleFont("Tomorrow"),
 )
 
-with gr.Blocks(title="Health Companion") as demo:
+with gr.Blocks(title="Health Companion", css=CSS, theme=THEME, head=CUSTOM_HEAD) as demo:
 
     gr.HTML(HEADER_HTML)
 
@@ -489,4 +489,4 @@ with gr.Blocks(title="Health Companion") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(css=CSS, theme=THEME, head=CUSTOM_HEAD)
+    demo.launch()
