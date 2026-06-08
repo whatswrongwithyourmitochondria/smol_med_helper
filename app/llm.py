@@ -9,7 +9,8 @@ try:
 except ImportError:
     class spaces:
         @staticmethod
-        def GPU(fn): return fn
+        def GPU(fn=None, **_):
+            return fn if fn is not None else lambda f: f
 
 MINICPM_TEXT_MODEL = os.getenv("MINICPM_TEXT_MODEL", "openbmb/MiniCPM3-4B")
 
@@ -44,7 +45,7 @@ def _load():
     return _model, _tokenizer
 
 
-@spaces.GPU
+@spaces.GPU(duration=180)
 def complete(user_message: str, extra_system: str = "") -> str:
     import torch
     model, tokenizer = _load()

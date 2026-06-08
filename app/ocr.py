@@ -1,4 +1,4 @@
-"""Camera / OCR via MiniCPM-V (transformers + ZeroGPU)."""
+"""Camera / OCR via MiniCPM-V 4.6 (transformers + ZeroGPU)."""
 
 from __future__ import annotations
 
@@ -7,13 +7,14 @@ import os
 try:
     import spaces
 except ImportError:
-    class spaces:  # no-op for local dev
+    class spaces:
         @staticmethod
-        def GPU(fn): return fn
+        def GPU(fn=None, **_):
+            return fn if fn is not None else lambda f: f
 
 from PIL import Image
 
-MINICPM_V_MODEL = os.getenv("MINICPM_V_MODEL", "openbmb/MiniCPM-V-2_6")
+MINICPM_V_MODEL = os.getenv("MINICPM_V_MODEL", "openbmb/MiniCPM-V-4.6")
 
 OCR_PROMPT = (
     "You are a reading assistant for a person with low vision. "
@@ -24,29 +25,54 @@ OCR_PROMPT = (
 )
 
 _model = None
-_tokenizer = None
+_processor = None
 
 
 def _load():
-    global _model, _tokenizer
+    global _model, _processor
     if _model is None:
-        import torch
-        from transformers import AutoModel, AutoTokenizer
-        _tokenizer = AutoTokenizer.from_pretrained(MINICPM_V_MODEL, trust_remote_code=True)
-        _model = AutoModel.from_pretrained(
+        from transformers import AutoModelForImageTextToText, AutoProcessor
+        _processor = AutoProcessor.from_pretrained(MINICPM_V_MODEL, trust_remote_code=True)
+        _model = AutoModelForImageTextToText.from_pretrained(
             MINICPM_V_MODEL,
             trust_remote_code=True,
-            torch_dtype=torch.float16,
+            torch_dtype="auto",
             device_map="auto",
         )
         _model.eval()
-    return _model, _tokenizer
+    return _model, _processor
 
 
-@spaces.GPU
+@spaces.GPU(duration=180)
 def extract_text(image_path: str) -> str:
-    model, tokenizer = _load()
+    model, processor = _load()
     image = Image.open(image_path).convert("RGB")
-    msgs = [{"role": "user", "content": [image, OCR_PROMPT]}]
-    result = model.chat(image=None, msgs=msgs, tokenizer=tokenizer, max_new_tokens=512)
-    return result.strip()
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": image},
+                {"type": "text", "text": OCR_PROMPT},
+            ],
+        }
+    ]
+    downsample_mode = "16x"
+    inputs = processor.apply_chat_template(
+        messages,
+        tokenize=True,
+        add_generation_prompt=True,
+        return_dict=True,
+        return_tensors="pt",
+        downsample_mode=downsample_mode,
+        max_slice_nums=36,
+    ).to(model.device)
+    generated_ids = model.generate(
+        **inputs, downsample_mode=downsample_mode, max_new_tokens=512
+    )
+    trimmed = [
+        out_ids[len(in_ids):]
+        for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+    ]
+    return processor.batch_decode(
+        trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
+    )[0].strip()

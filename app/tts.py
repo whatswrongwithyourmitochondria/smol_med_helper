@@ -10,7 +10,8 @@ try:
 except ImportError:
     class spaces:
         @staticmethod
-        def GPU(fn): return fn
+        def GPU(fn=None, **_):
+            return fn if fn is not None else lambda f: f
 
 _USE_KOKORO = os.getenv("USE_KOKORO", "1") == "1"
 _pipeline = None
@@ -24,7 +25,7 @@ def _load_kokoro():
     return _pipeline
 
 
-@spaces.GPU
+@spaces.GPU(duration=60)
 def _kokoro_speak(text: str) -> bytes:
     import numpy as np
     import soundfile as sf
