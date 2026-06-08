@@ -25,7 +25,7 @@ def _load_kokoro():
     return _pipeline
 
 
-@spaces.GPU(duration=60)
+@spaces.GPU(duration=30)
 def _kokoro_speak(text: str) -> bytes:
     import numpy as np
     import soundfile as sf

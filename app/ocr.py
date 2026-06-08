@@ -43,7 +43,7 @@ def _load():
     return _model, _processor
 
 
-@spaces.GPU(duration=180)
+@spaces.GPU(duration=90)
 def extract_text(image_path: str) -> str:
     model, processor = _load()
     image = Image.open(image_path).convert("RGB")

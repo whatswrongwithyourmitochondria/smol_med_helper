@@ -45,7 +45,7 @@ def _load():
     return _model, _tokenizer
 
 
-@spaces.GPU(duration=180)
+@spaces.GPU(duration=90)
 def complete(user_message: str, extra_system: str = "") -> str:
     import torch
     model, tokenizer = _load()
