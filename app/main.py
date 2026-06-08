@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import tempfile
 
+os.environ.setdefault("GRADIO_SSR_MODE", "False")
+
 import gradio as gr
 
 from app import log as log_module
