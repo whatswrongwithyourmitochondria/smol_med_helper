@@ -29,6 +29,15 @@ def _kokoro_speak(text: str) -> bytes:
     return buf.getvalue()
 
 
+def _silent_wav() -> bytes:
+    import numpy as np
+    import soundfile as sf
+
+    buf = io.BytesIO()
+    sf.write(buf, np.zeros(24000 // 4, dtype=np.float32), 24000, format="WAV")
+    return buf.getvalue()
+
+
 def _pyttsx3_speak(text: str) -> bytes:
     import tempfile, os as _os
     import pyttsx3
@@ -48,6 +57,10 @@ def speak(text: str) -> bytes:
     if _USE_KOKORO:
         try:
             return _kokoro_speak(text)
-        except Exception:
-            pass
-    return _pyttsx3_speak(text)
+        except Exception as exc:
+            print(f"Kokoro TTS failed: {exc}", flush=True)
+    try:
+        return _pyttsx3_speak(text)
+    except Exception as exc:
+        print(f"pyttsx3 TTS fallback failed: {exc}", flush=True)
+        return _silent_wav()

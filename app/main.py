@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+import traceback
 
 os.environ.setdefault("GRADIO_SSR_MODE", "False")
 
@@ -39,14 +40,28 @@ def handle_ocr(image) -> tuple[str, str]:
     import os as _os
     from PIL import Image as PILImage
 
-    img = PILImage.fromarray(image.astype("uint8"))
+    if isinstance(image, PILImage.Image):
+        img = image.convert("RGB")
+    elif hasattr(image, "astype"):
+        img = PILImage.fromarray(image.astype("uint8")).convert("RGB")
+    else:
+        raise ValueError(f"Unsupported image input type: {type(image)!r}")
+
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
         img_path = f.name
     img.save(img_path)
 
     from app.ocr import extract_text
-    result = extract_text(img_path)
-    _os.unlink(img_path)
+    try:
+        result = extract_text(img_path)
+    except Exception:
+        traceback.print_exc()
+        result = (
+            "I could not read this image. Please try another photo with clearer "
+            "lighting and the text fully in frame."
+        )
+    finally:
+        _os.unlink(img_path)
 
     log_module.add_entry(result, entry_type="ocr")
     audio_bytes = speak(result)
@@ -385,7 +400,7 @@ THEME = gr.themes.Base(
     font_mono=gr.themes.GoogleFont("Tomorrow"),
 )
 
-with gr.Blocks(title="Health Companion", css=CSS, theme=THEME, head=CUSTOM_HEAD) as demo:
+with gr.Blocks(title="Health Companion") as demo:
 
     gr.HTML(HEADER_HTML)
 
@@ -432,6 +447,7 @@ with gr.Blocks(title="Health Companion", css=CSS, theme=THEME, head=CUSTOM_HEAD)
             )
             camera_in = gr.Image(
                 sources=["webcam", "upload"],
+                type="numpy",
                 label="📷  Capture",
                 height=320,
             )
@@ -501,4 +517,4 @@ with gr.Blocks(title="Health Companion", css=CSS, theme=THEME, head=CUSTOM_HEAD)
 
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(css=CSS, theme=THEME, head=CUSTOM_HEAD)
