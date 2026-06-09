@@ -93,22 +93,40 @@ def _editor_value_from_image(image):
 
 
 def show_camera_capture():
-    return gr.update(visible=True, value=None), gr.update(visible=False)
+    return (
+        gr.update(visible=True, value=None),
+        gr.update(visible=False, value=None),
+        gr.update(visible=False),
+    )
 
 
 def load_camera_capture(image):
     if image is None:
-        return gr.update(), gr.update()
+        return gr.update(), gr.update(), gr.update()
     return gr.update(value=_editor_value_from_image(image), visible=True), gr.update(
         visible=False, value=None
-    )
+    ), gr.update(visible=True)
 
 
 def load_uploaded_photo(file_path):
     if file_path is None:
-        return gr.update(), gr.update()
+        return gr.update(), gr.update(), gr.update()
     value = {"background": file_path, "layers": [], "composite": None}
-    return gr.update(value=value, visible=True), gr.update(visible=False, value=None)
+    return (
+        gr.update(value=value, visible=True),
+        gr.update(visible=False, value=None),
+        gr.update(visible=True),
+    )
+
+
+def clear_photo_selection():
+    return (
+        gr.update(value=None, visible=False),
+        gr.update(value=None, visible=False),
+        gr.update(visible=False),
+        "",
+        gr.update(value=None),
+    )
 
 
 @spaces.GPU(duration=120)
@@ -376,19 +394,52 @@ button.primary:active {
 
 .source-actions {
     justify-content: center !important;
-    gap: 12px !important;
-    margin: 0 auto !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    margin: 0 0 16px !important;
 }
+.source-actions .source-button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+.source-actions .source-button button,
 .source-actions button {
-    min-height: 56px !important;
-    min-width: min(260px, 45vw) !important;
+    width: 100% !important;
+    min-height: 58px !important;
+    min-width: 0 !important;
+    border-radius: 14px !important;
 }
-.photo-start-panel {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 18px !important;
-    padding: 30px 24px !important;
-    margin-bottom: 14px !important;
+.source-actions .clear-photo-button {
+    flex: 0 0 92px !important;
+    max-width: 92px !important;
+}
+.source-actions .clear-photo-button button {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    font-size: 1rem !important;
+}
+.source-actions .upload-button,
+.source-actions .file-preview,
+.source-actions .wrap,
+.source-actions .form,
+.source-actions .block {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+@media (max-width: 640px) {
+    .source-actions {
+        flex-direction: column !important;
+    }
+    .source-actions .clear-photo-button {
+        flex: 1 1 auto !important;
+        max-width: none !important;
+    }
 }
 
 /* ── Secondary button ── */
@@ -555,15 +606,25 @@ with gr.Blocks(title="Health Companion") as demo:
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
             )
-            with gr.Group(elem_classes=["photo-start-panel"]):
-                with gr.Row(elem_classes=["source-actions"]):
-                    take_photo_btn = gr.Button("📷  Take a photo", variant="secondary")
-                    import_photo_btn = gr.UploadButton(
-                        "🖼️  Import a photo",
-                        file_types=["image"],
-                        type="filepath",
-                        variant="secondary",
-                    )
+            with gr.Row(elem_classes=["source-actions"]):
+                take_photo_btn = gr.Button(
+                    "📷  Take a photo",
+                    variant="secondary",
+                    elem_classes=["source-button"],
+                )
+                import_photo_btn = gr.UploadButton(
+                    "🖼️  Import a photo",
+                    file_types=["image"],
+                    type="filepath",
+                    variant="secondary",
+                    elem_classes=["source-button"],
+                )
+                clear_photo_btn = gr.Button(
+                    "🗑️ Clear",
+                    variant="secondary",
+                    visible=False,
+                    elem_classes=["source-button", "clear-photo-button"],
+                )
             camera_capture = gr.Image(
                 sources=["webcam"],
                 type="numpy",
@@ -605,16 +666,29 @@ with gr.Blocks(title="Health Companion") as demo:
                     interactive=False,
                     scale=2,
                 )
-            take_photo_btn.click(show_camera_capture, outputs=[camera_capture, camera_in])
+            take_photo_btn.click(
+                show_camera_capture,
+                outputs=[camera_capture, camera_in, clear_photo_btn],
+            )
             camera_capture.change(
                 load_camera_capture,
                 inputs=camera_capture,
-                outputs=[camera_in, camera_capture],
+                outputs=[camera_in, camera_capture, clear_photo_btn],
             )
             import_photo_btn.upload(
                 load_uploaded_photo,
                 inputs=import_photo_btn,
-                outputs=[camera_in, camera_capture],
+                outputs=[camera_in, camera_capture, clear_photo_btn],
+            )
+            clear_photo_btn.click(
+                clear_photo_selection,
+                outputs=[
+                    camera_in,
+                    camera_capture,
+                    clear_photo_btn,
+                    ocr_out,
+                    ocr_audio_out,
+                ],
             )
             ocr_btn.click(handle_ocr, inputs=camera_in, outputs=[ocr_out, ocr_audio_out])
 
