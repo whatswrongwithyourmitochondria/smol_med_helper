@@ -4,14 +4,6 @@ from __future__ import annotations
 
 import os
 
-try:
-    import spaces
-except ImportError:
-    class spaces:
-        @staticmethod
-        def GPU(fn=None, **_):
-            return fn if fn is not None else lambda f: f
-
 from PIL import Image
 
 MINICPM_V_MODEL = os.getenv("MINICPM_V_MODEL", "openbmb/MiniCPM-V-4.6")
@@ -43,7 +35,6 @@ def _load():
     return _model, _processor
 
 
-@spaces.GPU(duration=90)
 def extract_text(image_path: str) -> str:
     model, processor = _load()
     image = Image.open(image_path).convert("RGB")

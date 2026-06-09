@@ -5,14 +5,6 @@ from __future__ import annotations
 import io
 import os
 
-try:
-    import spaces
-except ImportError:
-    class spaces:
-        @staticmethod
-        def GPU(fn=None, **_):
-            return fn if fn is not None else lambda f: f
-
 _USE_KOKORO = os.getenv("USE_KOKORO", "1") == "1"
 _pipeline = None
 
@@ -25,7 +17,6 @@ def _load_kokoro():
     return _pipeline
 
 
-@spaces.GPU(duration=30)
 def _kokoro_speak(text: str) -> bytes:
     import numpy as np
     import soundfile as sf

@@ -4,14 +4,6 @@ from __future__ import annotations
 
 import os
 
-try:
-    import spaces
-except ImportError:
-    class spaces:
-        @staticmethod
-        def GPU(fn=None, **_):
-            return fn if fn is not None else lambda f: f
-
 MINICPM_TEXT_MODEL = os.getenv("MINICPM_TEXT_MODEL", "openbmb/MiniCPM3-4B")
 
 SYSTEM_PROMPT = """You are a health log assistant helping an elderly stroke survivor track his health.
@@ -45,7 +37,6 @@ def _load():
     return _model, _tokenizer
 
 
-@spaces.GPU(duration=90)
 def complete(user_message: str, extra_system: str = "") -> str:
     import torch
     model, tokenizer = _load()

@@ -9,6 +9,14 @@ os.environ.setdefault("GRADIO_SSR_MODE", "False")
 
 import gradio as gr
 
+try:
+    import spaces
+except ImportError:
+    class spaces:
+        @staticmethod
+        def GPU(fn=None, **_):
+            return fn if fn is not None else lambda f: f
+
 from app import log as log_module
 from app.brief import generate_brief
 from app.stt import transcribe
@@ -24,6 +32,7 @@ def handle_checkin(audio_path: str | None) -> str:
     return transcript
 
 
+@spaces.GPU(duration=120)
 def handle_ocr(image) -> tuple[str, str]:
     if image is None:
         return "", None
@@ -47,6 +56,7 @@ def handle_ocr(image) -> tuple[str, str]:
     return result, tmp.name
 
 
+@spaces.GPU(duration=120)
 def handle_brief(days: int) -> tuple:
     brief_text = generate_brief(days=int(days))
     audio_bytes = speak(brief_text)
