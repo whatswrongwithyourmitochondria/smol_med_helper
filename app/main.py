@@ -86,6 +86,30 @@ def _image_from_editor_value(value, image_module):
     return _pil_from_image_value(value, image_module)
 
 
+def _editor_value_from_image(image):
+    if image is None:
+        return gr.update()
+    return {"background": image, "layers": [], "composite": image}
+
+
+def show_camera_capture():
+    return gr.update(visible=True, value=None)
+
+
+def load_camera_capture(image):
+    if image is None:
+        return gr.update(), gr.update()
+    return _editor_value_from_image(image), gr.update(visible=False, value=None)
+
+
+def load_uploaded_photo(file_path):
+    if file_path is None:
+        return gr.update(), gr.update()
+    return {"background": file_path, "layers": [], "composite": None}, gr.update(
+        visible=False, value=None
+    )
+
+
 @spaces.GPU(duration=120)
 def handle_ocr(image_editor_value) -> tuple[str, str]:
     if image_editor_value is None:
@@ -331,6 +355,16 @@ button.primary:active {
     box-shadow: 0 2px 10px rgba(234,88,12,0.14) !important;
 }
 
+.source-actions {
+    justify-content: center !important;
+    gap: 12px !important;
+    margin: 0 auto 12px !important;
+}
+.source-actions button {
+    min-height: 56px !important;
+    min-width: min(260px, 45vw) !important;
+}
+
 /* ── Secondary button ── */
 button.secondary {
     font-family: 'Tomorrow', monospace !important;
@@ -495,8 +529,23 @@ with gr.Blocks(title="Health Companion") as demo:
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
             )
+            with gr.Row(elem_classes=["source-actions"]):
+                take_photo_btn = gr.Button("📷  Take a photo", variant="secondary")
+                import_photo_btn = gr.UploadButton(
+                    "🖼️  Import a photo",
+                    file_types=["image"],
+                    type="filepath",
+                    variant="secondary",
+                )
+            camera_capture = gr.Image(
+                sources=["webcam"],
+                type="numpy",
+                label="📷  Take a photo",
+                height=260,
+                visible=False,
+            )
             camera_in = gr.ImageEditor(
-                sources=["webcam", "upload"],
+                sources=(),
                 type="numpy",
                 image_mode="RGBA",
                 transforms=("crop", "resize"),
@@ -507,7 +556,10 @@ with gr.Blocks(title="Health Companion") as demo:
                     color_mode="fixed",
                 ),
                 eraser=gr.Eraser(default_size=40),
-                label="📷  Capture or mark area",
+                layers=False,
+                buttons=["fullscreen"],
+                label="✏️  Mark area",
+                placeholder="Take or import a photo",
                 height=360,
                 canvas_size=(900, 700),
             )
@@ -525,6 +577,17 @@ with gr.Blocks(title="Health Companion") as demo:
                     interactive=False,
                     scale=2,
                 )
+            take_photo_btn.click(show_camera_capture, outputs=camera_capture)
+            camera_capture.change(
+                load_camera_capture,
+                inputs=camera_capture,
+                outputs=[camera_in, camera_capture],
+            )
+            import_photo_btn.upload(
+                load_uploaded_photo,
+                inputs=import_photo_btn,
+                outputs=[camera_in, camera_capture],
+            )
             ocr_btn.click(handle_ocr, inputs=camera_in, outputs=[ocr_out, ocr_audio_out])
 
         # ── 📋 Doctor Brief ───────────────────────────────────────────────────
