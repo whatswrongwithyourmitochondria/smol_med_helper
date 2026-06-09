@@ -1,12 +1,8 @@
 ---
 title: Voice Health Companion
-emoji: 🎙️
-colorFrom: blue
-colorTo: indigo
 sdk: gradio
 sdk_version: 6.17.3
 app_file: app.py
-pinned: false
 license: apache-2.0
 tags:
   - build-small-hackathon
