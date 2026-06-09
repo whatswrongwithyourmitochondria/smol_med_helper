@@ -33,19 +33,69 @@ def handle_checkin(audio_path: str | None) -> str:
     return transcript
 
 
+def _pil_from_image_value(value, image_module):
+    if value is None:
+        return None
+    if isinstance(value, image_module.Image):
+        return value.convert("RGB")
+    if isinstance(value, str):
+        return image_module.open(value).convert("RGB")
+    if hasattr(value, "astype"):
+        return image_module.fromarray(value.astype("uint8")).convert("RGB")
+    raise ValueError(f"Unsupported image input type: {type(value)!r}")
+
+
+def _layer_bbox(layer, padding: int = 12):
+    import numpy as np
+
+    arr = np.asarray(layer)
+    if arr.ndim == 2:
+        mask = arr > 8
+    elif arr.ndim == 3 and arr.shape[-1] >= 4:
+        mask = arr[..., 3] > 8
+    elif arr.ndim == 3:
+        mask = arr.max(axis=-1) > 8
+    else:
+        return None
+    ys, xs = np.where(mask)
+    if not len(xs):
+        return None
+    left = max(int(xs.min()) - padding, 0)
+    top = max(int(ys.min()) - padding, 0)
+    right = int(xs.max()) + padding + 1
+    bottom = int(ys.max()) + padding + 1
+    return left, top, right, bottom
+
+
+def _image_from_editor_value(value, image_module):
+    if isinstance(value, dict):
+        background = _pil_from_image_value(value.get("background"), image_module)
+        composite = _pil_from_image_value(value.get("composite"), image_module)
+        base = background or composite
+        if base is None:
+            return None
+
+        for layer in value.get("layers") or []:
+            bbox = _layer_bbox(layer)
+            if bbox is not None:
+                left, top, right, bottom = bbox
+                right = min(right, base.width)
+                bottom = min(bottom, base.height)
+                return base.crop((left, top, right, bottom))
+        return composite or base
+    return _pil_from_image_value(value, image_module)
+
+
 @spaces.GPU(duration=120)
-def handle_ocr(image) -> tuple[str, str]:
-    if image is None:
+def handle_ocr(image_editor_value) -> tuple[str, str]:
+    if image_editor_value is None:
         return "", None
     import os as _os
     from PIL import Image as PILImage
 
-    if isinstance(image, PILImage.Image):
-        img = image.convert("RGB")
-    elif hasattr(image, "astype"):
-        img = PILImage.fromarray(image.astype("uint8")).convert("RGB")
-    else:
-        raise ValueError(f"Unsupported image input type: {type(image)!r}")
+    img = _image_from_editor_value(image_editor_value, PILImage)
+    if img is None:
+        return "", None
 
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
         img_path = f.name
@@ -445,11 +495,21 @@ with gr.Blocks(title="Health Companion") as demo:
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
             )
-            camera_in = gr.Image(
+            camera_in = gr.ImageEditor(
                 sources=["webcam", "upload"],
                 type="numpy",
-                label="📷  Capture",
-                height=320,
+                image_mode="RGBA",
+                transforms=("crop", "resize"),
+                brush=gr.Brush(
+                    default_size=40,
+                    colors=["#00d2ff"],
+                    default_color="#00d2ff",
+                    color_mode="fixed",
+                ),
+                eraser=gr.Eraser(default_size=40),
+                label="📷  Capture or mark area",
+                height=360,
+                canvas_size=(900, 700),
             )
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
             with gr.Row(equal_height=True):
