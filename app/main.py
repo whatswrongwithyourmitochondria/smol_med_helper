@@ -93,21 +93,22 @@ def _editor_value_from_image(image):
 
 
 def show_camera_capture():
-    return gr.update(visible=True, value=None)
+    return gr.update(visible=True, value=None), gr.update(visible=False)
 
 
 def load_camera_capture(image):
     if image is None:
         return gr.update(), gr.update()
-    return _editor_value_from_image(image), gr.update(visible=False, value=None)
+    return gr.update(value=_editor_value_from_image(image), visible=True), gr.update(
+        visible=False, value=None
+    )
 
 
 def load_uploaded_photo(file_path):
     if file_path is None:
         return gr.update(), gr.update()
-    return {"background": file_path, "layers": [], "composite": None}, gr.update(
-        visible=False, value=None
-    )
+    value = {"background": file_path, "layers": [], "composite": None}
+    return gr.update(value=value, visible=True), gr.update(visible=False, value=None)
 
 
 @spaces.GPU(duration=120)
@@ -145,10 +146,28 @@ def handle_ocr(image_editor_value) -> tuple[str, str]:
     return result, tmp.name
 
 
+def _speech_text_from_markdown(text: str) -> str:
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            lines.append("")
+            continue
+        if stripped.startswith("##"):
+            heading = stripped.lstrip("#").strip()
+            if heading:
+                lines.append(f"{heading}.")
+            continue
+        if stripped.startswith("- "):
+            stripped = stripped[2:].strip()
+        lines.append(stripped.replace("#", "").strip())
+    return "\n".join(line for line in lines if line).strip()
+
+
 @spaces.GPU(duration=120)
 def handle_brief(days: int) -> tuple:
     brief_text = generate_brief(days=int(days))
-    audio_bytes = speak(brief_text)
+    audio_bytes = speak(_speech_text_from_markdown(brief_text))
     tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     tmp.write(audio_bytes)
     tmp.close()
@@ -358,11 +377,18 @@ button.primary:active {
 .source-actions {
     justify-content: center !important;
     gap: 12px !important;
-    margin: 0 auto 12px !important;
+    margin: 0 auto !important;
 }
 .source-actions button {
     min-height: 56px !important;
     min-width: min(260px, 45vw) !important;
+}
+.photo-start-panel {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 18px !important;
+    padding: 30px 24px !important;
+    margin-bottom: 14px !important;
 }
 
 /* ── Secondary button ── */
@@ -529,14 +555,15 @@ with gr.Blocks(title="Health Companion") as demo:
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
             )
-            with gr.Row(elem_classes=["source-actions"]):
-                take_photo_btn = gr.Button("📷  Take a photo", variant="secondary")
-                import_photo_btn = gr.UploadButton(
-                    "🖼️  Import a photo",
-                    file_types=["image"],
-                    type="filepath",
-                    variant="secondary",
-                )
+            with gr.Group(elem_classes=["photo-start-panel"]):
+                with gr.Row(elem_classes=["source-actions"]):
+                    take_photo_btn = gr.Button("📷  Take a photo", variant="secondary")
+                    import_photo_btn = gr.UploadButton(
+                        "🖼️  Import a photo",
+                        file_types=["image"],
+                        type="filepath",
+                        variant="secondary",
+                    )
             camera_capture = gr.Image(
                 sources=["webcam"],
                 type="numpy",
@@ -562,6 +589,7 @@ with gr.Blocks(title="Health Companion") as demo:
                 placeholder="Take or import a photo",
                 height=360,
                 canvas_size=(900, 700),
+                visible=False,
             )
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
             with gr.Row(equal_height=True):
@@ -577,7 +605,7 @@ with gr.Blocks(title="Health Companion") as demo:
                     interactive=False,
                     scale=2,
                 )
-            take_photo_btn.click(show_camera_capture, outputs=camera_capture)
+            take_photo_btn.click(show_camera_capture, outputs=[camera_capture, camera_in])
             camera_capture.change(
                 load_camera_capture,
                 inputs=camera_capture,
