@@ -2,6 +2,7 @@
 title: Voice Health Companion
 sdk: gradio
 sdk_version: 6.17.3
+python_version: "3.12"
 app_file: app.py
 license: apache-2.0
 tags:
