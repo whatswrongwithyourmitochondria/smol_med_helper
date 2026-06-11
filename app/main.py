@@ -559,7 +559,8 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 
 /* ── Audio ── */
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
-.waveform-container { contain: layout !important; }
+.waveform-container { overflow: hidden !important; }
+.waveform-container div.canvas { width: 100% !important; max-width: 100% !important; }
 
 /* ── Doctor Brief — compact scrollable box ── */
 .brief-box textarea {
@@ -773,7 +774,7 @@ with gr.Blocks(title="Health Companion") as demo:
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
             ocr_audio_out = gr.Audio(
                 label="🔊  Reading",
-                autoplay=False,
+                autoplay=True,
                 interactive=False,
             )
             ocr_out = gr.Textbox(
