@@ -453,6 +453,11 @@ button.primary:active {
         height: auto !important;
         justify-content: center !important;
     }
+    /* The wrapper's height comes from the invisible clone — let it grow too */
+    .tab-wrapper.svelte-11gaq1 {
+        height: auto !important;
+        overflow: visible !important;
+    }
     button.svelte-11gaq1 {
         flex: 1 1 calc(50% - 8px) !important;
         min-width: 0 !important;
