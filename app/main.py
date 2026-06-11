@@ -23,6 +23,9 @@ from app.brief import generate_brief
 from app.stt import transcribe
 from app.tts import speak
 
+# ── Session state (server-side, keyed by Gradio session hash) ─────────────────
+_session_photos: dict[str, str] = {}  # session_hash → full-res temp file path
+
 # ── Handlers ──────────────────────────────────────────────────────────────────
 
 def handle_checkin(audio_path: str | None) -> str:
@@ -55,8 +58,7 @@ def _pil_to_b64(img) -> str:
 
 
 _CANVAS_HTML = """
-<div id="rsel-wrap" data-photo-path="{path}"
-     style="position:relative;display:inline-block;max-width:100%;touch-action:none;line-height:0;">
+<div id="rsel-wrap" style="position:relative;display:inline-block;max-width:100%;touch-action:none;line-height:0;">
   <img id="rsel-img" src="{src}" draggable="false"
        style="display:block;max-width:100%;max-height:380px;width:auto;height:auto;
               user-select:none;-webkit-user-drag:none;">
@@ -68,10 +70,10 @@ _CANVAS_HTML = """
 """
 
 
-def _make_canvas_html(pil_img, photo_path: str = "") -> str:
+def _make_canvas_html(pil_img) -> str:
     thumb = pil_img.copy()
     thumb.thumbnail((900, 700))
-    return _CANVAS_HTML.format(src=_pil_to_b64(thumb), path=photo_path)
+    return _CANVAS_HTML.format(src=_pil_to_b64(thumb))
 
 
 def show_camera_capture():
@@ -90,52 +92,50 @@ def _save_photo(pil) -> str:
     return tf.name
 
 
-def load_camera_capture(image):
+def load_camera_capture(image, request: gr.Request):
     if image is None:
-        return gr.update(), gr.update(), gr.update(), ""
+        return gr.update(), gr.update(), gr.update()
     pil = _to_pil(image)
     path = _save_photo(pil)
+    _session_photos[request.session_hash] = path
     print(f"[LOAD] webcam → {path}", flush=True)
     return (
-        gr.update(visible=False, value=None),                          # camera_capture
-        gr.update(value=_make_canvas_html(pil, path), visible=True),  # canvas_selector
-        gr.update(visible=True),                                       # clear_photo_btn
-        "",                                                            # photo_path_box (JS will fill from data-photo-path)
+        gr.update(visible=False, value=None),                   # camera_capture
+        gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
+        gr.update(visible=True),                                # clear_photo_btn
     )
 
 
-def load_uploaded_photo(file_path):
+def load_uploaded_photo(file_path, request: gr.Request):
     if file_path is None:
-        return gr.update(), gr.update(), gr.update(), ""
+        return gr.update(), gr.update(), gr.update()
     pil = _to_pil(file_path)
     path = _save_photo(pil)
+    _session_photos[request.session_hash] = path
     print(f"[LOAD] upload → {path}", flush=True)
     return (
-        gr.update(value=_make_canvas_html(pil, path), visible=True),  # canvas_selector
-        gr.update(visible=False, value=None),                         # camera_capture
-        gr.update(visible=True),                                      # clear_photo_btn
-        "",                                                           # photo_path_box (JS will fill from data-photo-path)
+        gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
+        gr.update(visible=False, value=None),                   # camera_capture
+        gr.update(visible=True),                                # clear_photo_btn
     )
 
 
-def clear_photo_selection():
+def clear_photo_selection(request: gr.Request):
+    _session_photos.pop(request.session_hash, None)
     return (
         gr.update(value="", visible=False),   # canvas_selector
         gr.update(value=None, visible=False), # camera_capture
         gr.update(visible=False),             # clear_photo_btn
         "",                                   # ocr_out
         gr.update(value=None),                # ocr_audio_out
-        None,                                 # photo_store
         "",                                   # crop_coords_box
     )
 
 
 @spaces.GPU(duration=120)
-def handle_ocr(image_path: str | None, crop_coords: str) -> tuple[str, str]:
+def _do_ocr(image_path: str, crop_coords: str) -> tuple[str, str]:
     import os as _os
     from PIL import Image as PILImage
-
-    print(f"[OCR] image_path={image_path!r}  crop_coords={crop_coords!r}", flush=True)
 
     if not image_path or not _os.path.exists(image_path):
         print("[OCR] no image — aborting", flush=True)
@@ -182,6 +182,12 @@ def handle_ocr(image_path: str | None, crop_coords: str) -> tuple[str, str]:
     tmp.write(audio_bytes)
     tmp.close()
     return result, tmp.name
+
+
+def handle_ocr(crop_coords: str, request: gr.Request) -> tuple[str, str]:
+    image_path = _session_photos.get(request.session_hash, "")
+    print(f"[OCR] image_path={image_path!r}  crop_coords={crop_coords!r}", flush=True)
+    return _do_ocr(image_path, crop_coords)
 
 
 def _speech_text_from_markdown(text: str) -> str:
@@ -566,8 +572,8 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--blue); }
 
-/* ── Hidden state textboxes (must stay rendered for Gradio to track values) ── */
-#photo-path-box, #crop-coords-box { display: none !important; }
+/* ── Hidden crop-coords textbox (must stay rendered for Gradio to track its value) ── */
+#crop-coords-box { display: none !important; }
 """
 
 HEADER_HTML = """
@@ -606,15 +612,6 @@ CUSTOM_HEAD = """
         var cvs = document.getElementById('rsel-cvs');
         if (!img || !cvs || cvs._rsel === img) return;
         cvs._rsel = img;  // mark as initialised for this img element
-
-        // Copy embedded photo path into the hidden path textbox via JS
-        // (Python-to-frontend updates for hidden textboxes are unreliable in Gradio 6.x)
-        var wrap = document.getElementById('rsel-wrap');
-        var pathTb = document.querySelector('#photo-path-box textarea');
-        if (wrap && pathTb) {
-            pathTb.value = wrap.getAttribute('data-photo-path') || '';
-            pathTb.dispatchEvent(new Event('input', { bubbles: true }));
-        }
 
         var ctx = cvs.getContext('2d');
         var sx, sy, active = false, rx = 0, ry = 0, rw = 0, rh = 0;
@@ -766,9 +763,6 @@ with gr.Blocks(title="Health Companion") as demo:
                 height=260,
                 visible=False,
             )
-            photo_path_box = gr.Textbox(
-                value="", elem_id="photo-path-box", container=False, label="",
-            )
             canvas_selector = gr.HTML(value="", visible=False)
             crop_coords_box = gr.Textbox(
                 value="", elem_id="crop-coords-box", container=False, label="",
@@ -794,28 +788,21 @@ with gr.Blocks(title="Health Companion") as demo:
             camera_capture.change(
                 load_camera_capture,
                 inputs=camera_capture,
-                outputs=[camera_capture, canvas_selector, clear_photo_btn, photo_path_box],
+                outputs=[camera_capture, canvas_selector, clear_photo_btn],
             )
             import_photo_btn.upload(
                 load_uploaded_photo,
                 inputs=import_photo_btn,
-                outputs=[canvas_selector, camera_capture, clear_photo_btn, photo_path_box],
+                outputs=[canvas_selector, camera_capture, clear_photo_btn],
             )
             clear_photo_btn.click(
                 clear_photo_selection,
-                outputs=[
-                    canvas_selector,
-                    camera_capture,
-                    clear_photo_btn,
-                    ocr_out,
-                    ocr_audio_out,
-                    photo_path_box,
-                    crop_coords_box,
-                ],
+                outputs=[canvas_selector, camera_capture, clear_photo_btn,
+                         ocr_out, ocr_audio_out, crop_coords_box],
             )
             ocr_btn.click(
                 handle_ocr,
-                inputs=[photo_path_box, crop_coords_box],
+                inputs=[crop_coords_box],
                 outputs=[ocr_out, ocr_audio_out],
             )
 
