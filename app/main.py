@@ -747,7 +747,7 @@ with gr.Blocks(title="Health Companion") as demo:
                 height=260,
                 visible=False,
             )
-            photo_store = gr.State(None)
+            photo_path_box = gr.Textbox(value="", visible=False)
             canvas_selector = gr.HTML(value="", visible=False)
             crop_coords_box = gr.Textbox(
                 value="", visible=False, elem_id="crop-coords-box",
@@ -773,12 +773,12 @@ with gr.Blocks(title="Health Companion") as demo:
             camera_capture.change(
                 load_camera_capture,
                 inputs=camera_capture,
-                outputs=[camera_capture, canvas_selector, clear_photo_btn, photo_store],
+                outputs=[camera_capture, canvas_selector, clear_photo_btn, photo_path_box],
             )
             import_photo_btn.upload(
                 load_uploaded_photo,
                 inputs=import_photo_btn,
-                outputs=[canvas_selector, camera_capture, clear_photo_btn, photo_store],
+                outputs=[canvas_selector, camera_capture, clear_photo_btn, photo_path_box],
             )
             clear_photo_btn.click(
                 clear_photo_selection,
@@ -788,13 +788,13 @@ with gr.Blocks(title="Health Companion") as demo:
                     clear_photo_btn,
                     ocr_out,
                     ocr_audio_out,
-                    photo_store,
+                    photo_path_box,
                     crop_coords_box,
                 ],
             )
             ocr_btn.click(
                 handle_ocr,
-                inputs=[photo_store, crop_coords_box],
+                inputs=[photo_path_box, crop_coords_box],
                 outputs=[ocr_out, ocr_audio_out],
             )
 
