@@ -45,44 +45,11 @@ def _pil_from_image_value(value, image_module):
     raise ValueError(f"Unsupported image input type: {type(value)!r}")
 
 
-def _layer_bbox(layer, padding: int = 12):
-    import numpy as np
-
-    arr = np.asarray(layer)
-    if arr.ndim == 2:
-        mask = arr > 8
-    elif arr.ndim == 3 and arr.shape[-1] >= 4:
-        mask = arr[..., 3] > 8
-    elif arr.ndim == 3:
-        mask = arr.max(axis=-1) > 8
-    else:
-        return None
-    ys, xs = np.where(mask)
-    if not len(xs):
-        return None
-    left = max(int(xs.min()) - padding, 0)
-    top = max(int(ys.min()) - padding, 0)
-    right = int(xs.max()) + padding + 1
-    bottom = int(ys.max()) + padding + 1
-    return left, top, right, bottom
-
-
 def _image_from_editor_value(value, image_module):
     if isinstance(value, dict):
-        background = _pil_from_image_value(value.get("background"), image_module)
         composite = _pil_from_image_value(value.get("composite"), image_module)
-        base = background or composite
-        if base is None:
-            return None
-
-        for layer in value.get("layers") or []:
-            bbox = _layer_bbox(layer)
-            if bbox is not None:
-                left, top, right, bottom = bbox
-                right = min(right, base.width)
-                bottom = min(bottom, base.height)
-                return base.crop((left, top, right, bottom))
-        return composite or base
+        background = _pil_from_image_value(value.get("background"), image_module)
+        return composite or background
     return _pil_from_image_value(value, image_module)
 
 
@@ -662,18 +629,13 @@ with gr.Blocks(title="Health Companion") as demo:
             camera_in = gr.ImageEditor(
                 sources=(),
                 type="numpy",
-                image_mode="RGBA",
-                transforms=("crop", "resize"),
-                brush=gr.Brush(
-                    default_size=40,
-                    colors=["#00d2ff"],
-                    default_color="#00d2ff",
-                    color_mode="fixed",
-                ),
-                eraser=gr.Eraser(default_size=40),
+                image_mode="RGB",
+                transforms=("crop",),
+                brush=None,
+                eraser=None,
                 layers=False,
-                buttons=["fullscreen"],
-                label="✏️  Mark area",
+                buttons=[],
+                label="✂️  Crop to area (optional)",
                 placeholder="Take or import a photo",
                 height=360,
                 canvas_size=(900, 700),
