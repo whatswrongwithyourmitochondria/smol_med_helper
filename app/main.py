@@ -78,43 +78,26 @@ def _make_canvas_html(pil_img) -> str:
     return _CANVAS_HTML.format(src=_pil_to_b64(thumb))
 
 
+_AUDIO_WRAP = (
+    'background:#0d1526;border:1px solid #192e50;border-radius:12px;padding:10px 14px;'
+)
+
+_EMPTY_AUDIO_HTML = (
+    f'<div style="{_AUDIO_WRAP}">'
+    '<audio controls style="width:100%;height:36px;accent-color:#00d2ff;opacity:0.35;"></audio>'
+    '</div>'
+)
+
+
 def _make_audio_html(audio_bytes: bytes) -> str:
     import base64
-    import numpy as np
-    import soundfile as sf
-    from io import BytesIO
-
-    data, _ = sf.read(BytesIO(audio_bytes), dtype="float32")
-    if data.ndim > 1:
-        data = data.mean(axis=1)
-
-    n = 80
-    chunk = max(1, len(data) // n)
-    peaks = [float(np.abs(data[i * chunk:(i + 1) * chunk]).max()) for i in range(n)]
-    hi = max(peaks) or 1.0
-    peaks = [p / hi for p in peaks]
-
-    bw, gap, h = 4, 2, 48
-    w = n * (bw + gap)
-    bars = "".join(
-        f'<rect x="{i*(bw+gap)}" y="{(h - max(3, int(p*h))) // 2}" '
-        f'width="{bw}" height="{max(3, int(p*h))}" rx="1" fill="#00d2ff" opacity="0.8"/>'
-        for i, p in enumerate(peaks)
-    )
-    svg = (
-        f'<svg viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg" '
-        f'preserveAspectRatio="none" style="width:100%;height:{h}px;display:block;">'
-        f'{bars}</svg>'
-    )
     audio_b64 = base64.b64encode(audio_bytes).decode()
     return (
-        f'<div style="background:#0d1526;border:1px solid #192e50;'
-        f'border-radius:12px;padding:10px 14px;">'
-        f'{svg}'
-        f'<audio class="smc-autoplay" controls '
-        f'style="width:100%;height:36px;margin-top:8px;accent-color:#00d2ff;">'
+        f'<div style="{_AUDIO_WRAP}">'
+        '<audio class="smc-autoplay" controls '
+        'style="width:100%;height:36px;accent-color:#00d2ff;">'
         f'<source src="data:audio/wav;base64,{audio_b64}" type="audio/wav">'
-        f'</audio></div>'
+        '</audio></div>'
     )
 
 
@@ -169,7 +152,7 @@ def clear_photo_selection(request: gr.Request):
         gr.update(value=None, visible=False), # camera_capture
         gr.update(visible=False),             # clear_photo_btn
         "",                                   # ocr_out
-        "",                                   # ocr_audio_out (gr.HTML)
+        _EMPTY_AUDIO_HTML,                    # ocr_audio_out (gr.HTML)
         "",                                   # crop_coords_box
     )
 
@@ -825,7 +808,7 @@ with gr.Blocks(title="Health Companion") as demo:
                 value="", elem_id="crop-coords-box", container=False, label="",
             )
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
-            ocr_audio_out = gr.HTML(value="")
+            ocr_audio_out = gr.HTML(value=_EMPTY_AUDIO_HTML)
             ocr_out = gr.Textbox(
                 label="📄  Extracted text",
                 lines=7,
