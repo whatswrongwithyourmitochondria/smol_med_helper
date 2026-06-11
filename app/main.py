@@ -33,80 +33,144 @@ def handle_checkin(audio_path: str | None) -> str:
     return transcript
 
 
-def _pil_from_image_value(value, image_module):
-    if value is None:
+def _to_pil(source):
+    from PIL import Image as PILImage
+    if source is None:
         return None
-    if isinstance(value, image_module.Image):
-        return value.convert("RGB")
-    if isinstance(value, str):
-        return image_module.open(value).convert("RGB")
-    if hasattr(value, "astype"):
-        return image_module.fromarray(value.astype("uint8")).convert("RGB")
-    raise ValueError(f"Unsupported image input type: {type(value)!r}")
+    if isinstance(source, PILImage.Image):
+        return source.convert("RGB")
+    if isinstance(source, str):
+        return PILImage.open(source).convert("RGB")
+    if hasattr(source, "astype"):
+        return PILImage.fromarray(source.astype("uint8")).convert("RGB")
+    raise ValueError(f"Unsupported image type: {type(source)!r}")
 
 
-def _image_from_editor_value(value, image_module):
-    if isinstance(value, dict):
-        composite = _pil_from_image_value(value.get("composite"), image_module)
-        background = _pil_from_image_value(value.get("background"), image_module)
-        return composite or background
-    return _pil_from_image_value(value, image_module)
+def _pil_to_b64(img) -> str:
+    import base64
+    from io import BytesIO
+    buf = BytesIO()
+    img.save(buf, format="JPEG", quality=88)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def _editor_value_from_image(image):
-    if image is None:
-        return gr.update()
-    return {"background": image, "layers": [], "composite": image}
+_CANVAS_HTML = """
+<div id="rsel-wrap" style="position:relative;display:inline-block;max-width:100%;touch-action:none;line-height:0;">
+  <img id="rsel-img" src="{src}" draggable="false"
+       style="display:block;max-width:100%;max-height:380px;width:auto;height:auto;
+              user-select:none;-webkit-user-drag:none;">
+  <canvas id="rsel-cvs" style="position:absolute;top:0;left:0;cursor:crosshair;touch-action:none;"></canvas>
+</div>
+<p style="margin:6px 0 0;font-size:0.83rem;color:#4d6a8a;text-align:center;line-height:1.4;">
+  Drag to select an area &nbsp;·&nbsp; leave blank to read the whole image
+</p>
+<script>
+(function(){{
+  var img=document.getElementById('rsel-img'),
+      cvs=document.getElementById('rsel-cvs'),
+      ctx=cvs.getContext('2d'),
+      sx,sy,active=false,rx=0,ry=0,rw=0,rh=0;
+  function resize(){{cvs.width=img.offsetWidth;cvs.height=img.offsetHeight;draw();}}
+  function draw(){{
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    if(rw>4&&rh>4){{
+      ctx.strokeStyle='#00d2ff';ctx.lineWidth=2;ctx.setLineDash([6,3]);
+      ctx.strokeRect(rx,ry,rw,rh);
+      ctx.fillStyle='rgba(0,210,255,0.08)';ctx.fillRect(rx,ry,rw,rh);
+    }}
+  }}
+  function pt(e){{var r=cvs.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return[t.clientX-r.left,t.clientY-r.top];}}
+  function clamp(v,lo,hi){{return Math.max(lo,Math.min(hi,v));}}
+  cvs.addEventListener('mousedown',function(e){{var p=pt(e);sx=p[0];sy=p[1];active=true;}});
+  cvs.addEventListener('mousemove',function(e){{if(!active)return;var p=pt(e);rx=Math.min(sx,p[0]);ry=Math.min(sy,p[1]);rw=Math.abs(p[0]-sx);rh=Math.abs(p[1]-sy);draw();}});
+  cvs.addEventListener('mouseup',done);
+  cvs.addEventListener('touchstart',function(e){{e.preventDefault();var p=pt(e);sx=p[0];sy=p[1];active=true;}},{{passive:false}});
+  cvs.addEventListener('touchmove',function(e){{if(!active)return;e.preventDefault();var p=pt(e);rx=Math.min(sx,p[0]);ry=Math.min(sy,p[1]);rw=Math.abs(p[0]-sx);rh=Math.abs(p[1]-sy);draw();}},{{passive:false}});
+  cvs.addEventListener('touchend',done);
+  function done(){{
+    if(!active)return;active=false;
+    var tb=document.querySelector('#crop-coords-box textarea');
+    if(!tb)return;
+    if(rw<4||rh<4){{tb.value='';}}
+    else{{
+      tb.value=[rx/cvs.width,ry/cvs.height,(rx+rw)/cvs.width,(ry+rh)/cvs.height]
+               .map(function(v){{return clamp(v,0,1).toFixed(4);}}).join(',');
+    }}
+    tb.dispatchEvent(new Event('input',{{bubbles:true}}));
+  }}
+  if(img.complete&&img.naturalWidth)resize();
+  else img.addEventListener('load',resize);
+  new ResizeObserver(resize).observe(img);
+}})();
+</script>
+"""
+
+
+def _make_canvas_html(pil_img) -> str:
+    return _CANVAS_HTML.format(src=_pil_to_b64(pil_img))
 
 
 def show_camera_capture():
     return (
-        gr.update(visible=True, value=None),
-        gr.update(visible=False, value=None),
-        gr.update(visible=False),
+        gr.update(visible=True, value=None),   # camera_capture
+        gr.update(visible=False, value=""),    # canvas_selector
+        gr.update(visible=False),              # clear_photo_btn
     )
 
 
 def load_camera_capture(image):
     if image is None:
-        return gr.update(), gr.update(), gr.update()
-    return gr.update(value=_editor_value_from_image(image), visible=True), gr.update(
-        visible=False, value=None
-    ), gr.update(visible=True)
+        return gr.update(), gr.update(), gr.update(), None
+    pil = _to_pil(image)
+    return (
+        gr.update(visible=False, value=None),                   # camera_capture
+        gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
+        gr.update(visible=True),                                # clear_photo_btn
+        pil,                                                    # photo_store
+    )
 
 
 def load_uploaded_photo(file_path):
     if file_path is None:
-        return gr.update(), gr.update(), gr.update()
-    value = {"background": file_path, "layers": [], "composite": None}
+        return gr.update(), gr.update(), gr.update(), None
+    pil = _to_pil(file_path)
     return (
-        gr.update(value=value, visible=True),
-        gr.update(visible=False, value=None),
-        gr.update(visible=True),
+        gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
+        gr.update(visible=False, value=None),                   # camera_capture
+        gr.update(visible=True),                                # clear_photo_btn
+        pil,                                                    # photo_store
     )
 
 
 def clear_photo_selection():
     return (
-        gr.update(value=None, visible=False),
-        gr.update(value=None, visible=False),
-        gr.update(visible=False),
-        "",
-        gr.update(value=None),
+        gr.update(value="", visible=False),   # canvas_selector
+        gr.update(value=None, visible=False), # camera_capture
+        gr.update(visible=False),             # clear_photo_btn
+        "",                                   # ocr_out
+        gr.update(value=None),                # ocr_audio_out
+        None,                                 # photo_store
+        "",                                   # crop_coords_box
     )
 
 
 @spaces.GPU(duration=120)
-def handle_ocr(image_editor_value) -> tuple[str, str]:
-    if image_editor_value is None:
+def handle_ocr(pil_image, crop_coords: str) -> tuple[str, str]:
+    if pil_image is None:
         return "", None
+
+    img = pil_image.copy()
+
+    if crop_coords and crop_coords.strip():
+        try:
+            x1, y1, x2, y2 = [float(v) for v in crop_coords.split(",")]
+            if 0 <= x1 < x2 <= 1 and 0 <= y1 < y2 <= 1:
+                w, h = img.size
+                img = img.crop((int(x1 * w), int(y1 * h), int(x2 * w), int(y2 * h)))
+        except Exception:
+            pass
+
     import os as _os
-    from PIL import Image as PILImage
-
-    img = _image_from_editor_value(image_editor_value, PILImage)
-    if img is None:
-        return "", None
-
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
         img_path = f.name
     img.save(img_path)
@@ -626,20 +690,10 @@ with gr.Blocks(title="Health Companion") as demo:
                 height=260,
                 visible=False,
             )
-            camera_in = gr.ImageEditor(
-                sources=(),
-                type="numpy",
-                image_mode="RGB",
-                transforms=("crop",),
-                brush=None,
-                eraser=None,
-                layers=False,
-                buttons=[],
-                label="✂️  Crop to area (optional)",
-                placeholder="Take or import a photo",
-                height=360,
-                canvas_size=(900, 700),
-                visible=False,
+            photo_store = gr.State(None)
+            canvas_selector = gr.HTML(value="", visible=False)
+            crop_coords_box = gr.Textbox(
+                value="", visible=False, elem_id="crop-coords-box",
             )
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
             with gr.Row(equal_height=True):
@@ -657,29 +711,35 @@ with gr.Blocks(title="Health Companion") as demo:
                 )
             take_photo_btn.click(
                 show_camera_capture,
-                outputs=[camera_capture, camera_in, clear_photo_btn],
+                outputs=[camera_capture, canvas_selector, clear_photo_btn],
             )
             camera_capture.change(
                 load_camera_capture,
                 inputs=camera_capture,
-                outputs=[camera_in, camera_capture, clear_photo_btn],
+                outputs=[camera_capture, canvas_selector, clear_photo_btn, photo_store],
             )
             import_photo_btn.upload(
                 load_uploaded_photo,
                 inputs=import_photo_btn,
-                outputs=[camera_in, camera_capture, clear_photo_btn],
+                outputs=[canvas_selector, camera_capture, clear_photo_btn, photo_store],
             )
             clear_photo_btn.click(
                 clear_photo_selection,
                 outputs=[
-                    camera_in,
+                    canvas_selector,
                     camera_capture,
                     clear_photo_btn,
                     ocr_out,
                     ocr_audio_out,
+                    photo_store,
+                    crop_coords_box,
                 ],
             )
-            ocr_btn.click(handle_ocr, inputs=camera_in, outputs=[ocr_out, ocr_audio_out])
+            ocr_btn.click(
+                handle_ocr,
+                inputs=[photo_store, crop_coords_box],
+                outputs=[ocr_out, ocr_audio_out],
+            )
 
         # ── 📋 Doctor Brief ───────────────────────────────────────────────────
         with gr.Tab("📋  Doctor Brief"):
