@@ -559,6 +559,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 
 /* ── Audio ── */
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
+.waveform-container { contain: layout !important; }
 
 /* ── Doctor Brief — compact scrollable box ── */
 .brief-box textarea {
