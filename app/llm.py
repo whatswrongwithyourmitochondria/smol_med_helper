@@ -37,6 +37,20 @@ def _load():
     return _model, _tokenizer
 
 
+OCR_CLEAN_EXTRA = """The user has photographed a medicine box, device screen, or document.
+Below is the raw text extracted from the image. Clean it up for someone who will hear it read aloud:
+- Convert tables and columns into plain sentences
+- Remove barcodes, batch numbers, legal boilerplate, and manufacturer addresses
+- Keep drug names, dosages, instructions, warnings, and any numeric readings
+- If a numeric reading is present (blood pressure, glucose, weight, temperature), start your response with "Reading: [value]"
+- Do not add anything not present in the original text
+- If there is nothing medically relevant, say so briefly"""
+
+
+def clean_ocr(raw_text: str) -> str:
+    return complete(raw_text, extra_system=OCR_CLEAN_EXTRA)
+
+
 def complete(user_message: str, extra_system: str = "") -> str:
     import torch
     model, tokenizer = _load()

@@ -186,9 +186,10 @@ def _do_ocr(image_path: str, crop_coords: str) -> tuple[str, str]:
     img.save(ocr_path)
 
     from app.ocr import extract_text
+    from app.llm import clean_ocr
     try:
         result = extract_text(ocr_path)
-        print(f"[OCR] result={result!r}", flush=True)
+        print(f"[OCR] raw={result!r}", flush=True)
     except Exception:
         traceback.print_exc()
         result = (
@@ -200,6 +201,12 @@ def _do_ocr(image_path: str, crop_coords: str) -> tuple[str, str]:
 
     if not result:
         result = "No readable text found in this image."
+    else:
+        try:
+            result = clean_ocr(result)
+            print(f"[OCR] cleaned={result!r}", flush=True)
+        except Exception:
+            traceback.print_exc()
 
     log_module.add_entry(result, entry_type="ocr")
     audio_bytes = speak(result)
