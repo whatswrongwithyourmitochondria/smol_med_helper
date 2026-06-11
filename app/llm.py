@@ -1,10 +1,10 @@
-"""MiniCPM text model inference via transformers + ZeroGPU."""
+"""Qwen3-4B text model inference via transformers + ZeroGPU."""
 
 from __future__ import annotations
 
 import os
 
-MINICPM_TEXT_MODEL = os.getenv("MINICPM_TEXT_MODEL", "openbmb/MiniCPM3-4B")
+MINICPM_TEXT_MODEL = os.getenv("TEXT_MODEL", "Qwen/Qwen3-4B")
 
 SYSTEM_PROMPT = """You are a health log assistant helping an elderly stroke survivor track his health.
 
@@ -26,11 +26,10 @@ def _load():
     if _model is None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
-        _tokenizer = AutoTokenizer.from_pretrained(MINICPM_TEXT_MODEL, trust_remote_code=True)
+        _tokenizer = AutoTokenizer.from_pretrained(MINICPM_TEXT_MODEL)
         _model = AutoModelForCausalLM.from_pretrained(
             MINICPM_TEXT_MODEL,
-            trust_remote_code=True,
-            torch_dtype=torch.float16,
+            torch_dtype="auto",
             device_map="auto",
         )
         _model.eval()
@@ -59,7 +58,7 @@ def complete(user_message: str, extra_system: str = "") -> str:
         {"role": "system", "content": system},
         {"role": "user", "content": user_message},
     ]
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
     inputs = tokenizer(text, return_tensors="pt").to(model.device)
     with torch.no_grad():
         outputs = model.generate(
