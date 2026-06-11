@@ -292,6 +292,7 @@ div.tab-container {
     padding: 7px !important;
     margin-bottom: 14px !important;
     gap: 4px !important;
+    justify-content: center !important;
 }
 button.svelte-11gaq1 {
     font-family: 'Tomorrow', monospace !important;
@@ -451,7 +452,6 @@ button.primary:active {
     div.tab-container {
         flex-wrap: wrap !important;
         height: auto !important;
-        justify-content: center !important;
     }
     /* The wrapper's height comes from the invisible clone — let it grow too */
     .tab-wrapper.svelte-11gaq1 {
