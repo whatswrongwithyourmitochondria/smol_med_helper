@@ -450,6 +450,8 @@ button.primary:active {
     /* Tab bar: 2×2 grid so all four tabs fit without overflow */
     div.tab-container {
         flex-wrap: wrap !important;
+        height: auto !important;
+        justify-content: center !important;
     }
     button.svelte-11gaq1 {
         flex: 1 1 calc(50% - 8px) !important;
