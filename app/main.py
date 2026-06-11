@@ -79,6 +79,14 @@ def show_camera_capture():
     )
 
 
+def _save_photo(pil) -> str:
+    """Save PIL image to a temp file and return the path."""
+    tf = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+    pil.save(tf.name, "JPEG", quality=95)
+    tf.close()
+    return tf.name
+
+
 def load_camera_capture(image):
     if image is None:
         return gr.update(), gr.update(), gr.update(), None
@@ -87,7 +95,7 @@ def load_camera_capture(image):
         gr.update(visible=False, value=None),                   # camera_capture
         gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
         gr.update(visible=True),                                # clear_photo_btn
-        pil,                                                    # photo_store
+        _save_photo(pil),                                       # photo_store (path)
     )
 
 
@@ -99,7 +107,7 @@ def load_uploaded_photo(file_path):
         gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
         gr.update(visible=False, value=None),                   # camera_capture
         gr.update(visible=True),                                # clear_photo_btn
-        pil,                                                    # photo_store
+        _save_photo(pil),                                       # photo_store (path)
     )
 
 
@@ -116,11 +124,18 @@ def clear_photo_selection():
 
 
 @spaces.GPU(duration=120)
-def handle_ocr(pil_image, crop_coords: str) -> tuple[str, str]:
-    if pil_image is None:
+def handle_ocr(image_path: str | None, crop_coords: str) -> tuple[str, str]:
+    import os as _os
+    from PIL import Image as PILImage
+
+    print(f"[OCR] image_path={image_path!r}  crop_coords={crop_coords!r}", flush=True)
+
+    if not image_path or not _os.path.exists(image_path):
+        print("[OCR] no image — aborting", flush=True)
         return "", None
 
-    img = pil_image.copy()
+    img = PILImage.open(image_path).convert("RGB")
+    print(f"[OCR] loaded image size={img.size}", flush=True)
 
     if crop_coords and crop_coords.strip():
         try:
@@ -128,17 +143,20 @@ def handle_ocr(pil_image, crop_coords: str) -> tuple[str, str]:
             if 0 <= x1 < x2 <= 1 and 0 <= y1 < y2 <= 1:
                 w, h = img.size
                 img = img.crop((int(x1 * w), int(y1 * h), int(x2 * w), int(y2 * h)))
+                print(f"[OCR] cropped to {img.size}", flush=True)
+            else:
+                print(f"[OCR] invalid crop coords {x1},{y1},{x2},{y2} — using full image", flush=True)
         except Exception:
-            pass
+            traceback.print_exc()
 
-    import os as _os
     with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
-        img_path = f.name
-    img.save(img_path)
+        ocr_path = f.name
+    img.save(ocr_path)
 
     from app.ocr import extract_text
     try:
-        result = extract_text(img_path)
+        result = extract_text(ocr_path)
+        print(f"[OCR] result={result!r}", flush=True)
     except Exception:
         traceback.print_exc()
         result = (
@@ -146,7 +164,10 @@ def handle_ocr(pil_image, crop_coords: str) -> tuple[str, str]:
             "lighting and the text fully in frame."
         )
     finally:
-        _os.unlink(img_path)
+        _os.unlink(ocr_path)
+
+    if not result:
+        result = "No readable text found in this image."
 
     log_module.add_entry(result, entry_type="ocr")
     audio_bytes = speak(result)
