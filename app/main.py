@@ -212,6 +212,12 @@ def handle_history() -> str:
 CSS = """
 /* @import not allowed in constructable stylesheets — fonts loaded via head param instead */
 
+/* ── Mobile overflow guard ── */
+html, body {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+}
+
 /* ── Tokens + Gradio primary override ── */
 :root {
     --bg:       #070b16;
@@ -439,6 +445,20 @@ button.primary:active {
     .source-actions .clear-photo-button {
         flex: 1 1 auto !important;
         max-width: none !important;
+    }
+
+    /* Tab bar: 2×2 grid so all four tabs fit without overflow */
+    div.tab-container {
+        flex-wrap: wrap !important;
+    }
+    button.svelte-11gaq1 {
+        flex: 1 1 calc(50% - 8px) !important;
+        min-width: 0 !important;
+        padding: 11px 8px !important;
+        font-size: 0.72rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
 }
 
