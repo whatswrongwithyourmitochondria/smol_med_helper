@@ -55,7 +55,8 @@ def _pil_to_b64(img) -> str:
 
 
 _CANVAS_HTML = """
-<div id="rsel-wrap" style="position:relative;display:inline-block;max-width:100%;touch-action:none;line-height:0;">
+<div id="rsel-wrap" data-photo-path="{path}"
+     style="position:relative;display:inline-block;max-width:100%;touch-action:none;line-height:0;">
   <img id="rsel-img" src="{src}" draggable="false"
        style="display:block;max-width:100%;max-height:380px;width:auto;height:auto;
               user-select:none;-webkit-user-drag:none;">
@@ -67,8 +68,10 @@ _CANVAS_HTML = """
 """
 
 
-def _make_canvas_html(pil_img) -> str:
-    return _CANVAS_HTML.format(src=_pil_to_b64(pil_img))
+def _make_canvas_html(pil_img, photo_path: str = "") -> str:
+    thumb = pil_img.copy()
+    thumb.thumbnail((900, 700))
+    return _CANVAS_HTML.format(src=_pil_to_b64(thumb), path=photo_path)
 
 
 def show_camera_capture():
@@ -94,10 +97,10 @@ def load_camera_capture(image):
     path = _save_photo(pil)
     print(f"[LOAD] webcam → {path}", flush=True)
     return (
-        gr.update(visible=False, value=None),                   # camera_capture
-        gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
-        gr.update(visible=True),                                # clear_photo_btn
-        path,                                                   # photo_path_box
+        gr.update(visible=False, value=None),                          # camera_capture
+        gr.update(value=_make_canvas_html(pil, path), visible=True),  # canvas_selector
+        gr.update(visible=True),                                       # clear_photo_btn
+        "",                                                            # photo_path_box (JS will fill from data-photo-path)
     )
 
 
@@ -108,10 +111,10 @@ def load_uploaded_photo(file_path):
     path = _save_photo(pil)
     print(f"[LOAD] upload → {path}", flush=True)
     return (
-        gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
-        gr.update(visible=False, value=None),                   # camera_capture
-        gr.update(visible=True),                                # clear_photo_btn
-        path,                                                   # photo_path_box
+        gr.update(value=_make_canvas_html(pil, path), visible=True),  # canvas_selector
+        gr.update(visible=False, value=None),                         # camera_capture
+        gr.update(visible=True),                                      # clear_photo_btn
+        "",                                                           # photo_path_box (JS will fill from data-photo-path)
     )
 
 
@@ -603,6 +606,15 @@ CUSTOM_HEAD = """
         var cvs = document.getElementById('rsel-cvs');
         if (!img || !cvs || cvs._rsel === img) return;
         cvs._rsel = img;  // mark as initialised for this img element
+
+        // Copy embedded photo path into the hidden path textbox via JS
+        // (Python-to-frontend updates for hidden textboxes are unreliable in Gradio 6.x)
+        var wrap = document.getElementById('rsel-wrap');
+        var pathTb = document.querySelector('#photo-path-box textarea');
+        if (wrap && pathTb) {
+            pathTb.value = wrap.getAttribute('data-photo-path') || '';
+            pathTb.dispatchEvent(new Event('input', { bubbles: true }));
+        }
 
         var ctx = cvs.getContext('2d');
         var sx, sy, active = false, rx = 0, ry = 0, rw = 0, rh = 0;
