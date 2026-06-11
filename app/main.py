@@ -64,45 +64,6 @@ _CANVAS_HTML = """
 <p style="margin:6px 0 0;font-size:0.83rem;color:#4d6a8a;text-align:center;line-height:1.4;">
   Drag to select an area &nbsp;·&nbsp; leave blank to read the whole image
 </p>
-<script>
-(function(){{
-  var img=document.getElementById('rsel-img'),
-      cvs=document.getElementById('rsel-cvs'),
-      ctx=cvs.getContext('2d'),
-      sx,sy,active=false,rx=0,ry=0,rw=0,rh=0;
-  function resize(){{cvs.width=img.offsetWidth;cvs.height=img.offsetHeight;draw();}}
-  function draw(){{
-    ctx.clearRect(0,0,cvs.width,cvs.height);
-    if(rw>4&&rh>4){{
-      ctx.strokeStyle='#00d2ff';ctx.lineWidth=2;ctx.setLineDash([6,3]);
-      ctx.strokeRect(rx,ry,rw,rh);
-      ctx.fillStyle='rgba(0,210,255,0.08)';ctx.fillRect(rx,ry,rw,rh);
-    }}
-  }}
-  function pt(e){{var r=cvs.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return[t.clientX-r.left,t.clientY-r.top];}}
-  function clamp(v,lo,hi){{return Math.max(lo,Math.min(hi,v));}}
-  cvs.addEventListener('mousedown',function(e){{var p=pt(e);sx=p[0];sy=p[1];active=true;}});
-  cvs.addEventListener('mousemove',function(e){{if(!active)return;var p=pt(e);rx=Math.min(sx,p[0]);ry=Math.min(sy,p[1]);rw=Math.abs(p[0]-sx);rh=Math.abs(p[1]-sy);draw();}});
-  cvs.addEventListener('mouseup',done);
-  cvs.addEventListener('touchstart',function(e){{e.preventDefault();var p=pt(e);sx=p[0];sy=p[1];active=true;}},{{passive:false}});
-  cvs.addEventListener('touchmove',function(e){{if(!active)return;e.preventDefault();var p=pt(e);rx=Math.min(sx,p[0]);ry=Math.min(sy,p[1]);rw=Math.abs(p[0]-sx);rh=Math.abs(p[1]-sy);draw();}},{{passive:false}});
-  cvs.addEventListener('touchend',done);
-  function done(){{
-    if(!active)return;active=false;
-    var tb=document.querySelector('#crop-coords-box textarea');
-    if(!tb)return;
-    if(rw<4||rh<4){{tb.value='';}}
-    else{{
-      tb.value=[rx/cvs.width,ry/cvs.height,(rx+rw)/cvs.width,(ry+rh)/cvs.height]
-               .map(function(v){{return clamp(v,0,1).toFixed(4);}}).join(',');
-    }}
-    tb.dispatchEvent(new Event('input',{{bubbles:true}}));
-  }}
-  if(img.complete&&img.naturalWidth)resize();
-  else img.addEventListener('load',resize);
-  new ResizeObserver(resize).observe(img);
-}})();
-</script>
 """
 
 
@@ -605,6 +566,81 @@ CUSTOM_HEAD = """
         { attributes: true, attributeFilter: ['style'] }
     );
     [50, 200, 600, 1500].forEach(function (t) { setTimeout(fix, t); });
+}());
+
+// ── Rectangle selector ──────────────────────────────────────────────────────
+(function () {
+    function initRsel() {
+        var img = document.getElementById('rsel-img');
+        var cvs = document.getElementById('rsel-cvs');
+        if (!img || !cvs || cvs._rsel === img) return;
+        cvs._rsel = img;  // mark as initialised for this img element
+
+        var ctx = cvs.getContext('2d');
+        var sx, sy, active = false, rx = 0, ry = 0, rw = 0, rh = 0;
+
+        function resize() {
+            cvs.width  = img.offsetWidth;
+            cvs.height = img.offsetHeight;
+            draw();
+        }
+        function draw() {
+            ctx.clearRect(0, 0, cvs.width, cvs.height);
+            if (rw > 4 && rh > 4) {
+                ctx.strokeStyle = '#00d2ff';
+                ctx.lineWidth   = 2;
+                ctx.setLineDash([6, 3]);
+                ctx.strokeRect(rx, ry, rw, rh);
+                ctx.fillStyle = 'rgba(0,210,255,0.08)';
+                ctx.fillRect(rx, ry, rw, rh);
+            }
+        }
+        function pt(e) {
+            var r = cvs.getBoundingClientRect();
+            var t = e.touches ? e.touches[0] : e;
+            return [t.clientX - r.left, t.clientY - r.top];
+        }
+        function onDown(e) { var p = pt(e); sx = p[0]; sy = p[1]; active = true; }
+        function onMove(e) {
+            if (!active) return;
+            if (e.cancelable) e.preventDefault();
+            var p = pt(e);
+            rx = Math.min(sx, p[0]); ry = Math.min(sy, p[1]);
+            rw = Math.abs(p[0] - sx); rh = Math.abs(p[1] - sy);
+            draw();
+        }
+        function onUp() {
+            if (!active) return;
+            active = false;
+            var tb = document.querySelector('#crop-coords-box textarea');
+            if (!tb) return;
+            if (rw < 4 || rh < 4) {
+                tb.value = '';
+            } else {
+                tb.value = [rx/cvs.width, ry/cvs.height,
+                            (rx+rw)/cvs.width, (ry+rh)/cvs.height]
+                    .map(function (v) { return Math.max(0, Math.min(1, v)).toFixed(4); })
+                    .join(',');
+            }
+            tb.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        cvs.addEventListener('mousedown',  onDown);
+        cvs.addEventListener('mousemove',  onMove);
+        cvs.addEventListener('mouseup',    onUp);
+        cvs.addEventListener('touchstart', onDown, { passive: true });
+        cvs.addEventListener('touchmove',  onMove, { passive: false });
+        cvs.addEventListener('touchend',   onUp);
+
+        if (img.complete && img.naturalWidth) resize();
+        else img.addEventListener('load', resize);
+        new ResizeObserver(resize).observe(img);
+    }
+
+    new MutationObserver(initRsel).observe(document.documentElement, {
+        childList: true, subtree: true
+    });
+    initRsel();
 }());
 </script>
 """
