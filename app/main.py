@@ -770,19 +770,16 @@ with gr.Blocks(title="Health Companion") as demo:
                 value="", elem_id="crop-coords-box", container=False, label="",
             )
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
-            with gr.Row(equal_height=True):
-                ocr_out = gr.Textbox(
-                    label="📄  Extracted text",
-                    lines=7,
-                    interactive=False,
-                    scale=3,
-                )
-                ocr_audio_out = gr.Audio(
-                    label="🔊  Reading",
-                    autoplay=True,
-                    interactive=False,
-                    scale=2,
-                )
+            ocr_audio_out = gr.Audio(
+                label="🔊  Reading",
+                autoplay=True,
+                interactive=False,
+            )
+            ocr_out = gr.Textbox(
+                label="📄  Extracted text",
+                lines=7,
+                interactive=False,
+            )
             take_photo_btn.click(
                 show_camera_capture,
                 outputs=[camera_capture, canvas_selector, clear_photo_btn],
