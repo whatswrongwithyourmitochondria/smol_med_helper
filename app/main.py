@@ -89,25 +89,29 @@ def _save_photo(pil) -> str:
 
 def load_camera_capture(image):
     if image is None:
-        return gr.update(), gr.update(), gr.update(), None
+        return gr.update(), gr.update(), gr.update(), ""
     pil = _to_pil(image)
+    path = _save_photo(pil)
+    print(f"[LOAD] webcam → {path}", flush=True)
     return (
         gr.update(visible=False, value=None),                   # camera_capture
         gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
         gr.update(visible=True),                                # clear_photo_btn
-        _save_photo(pil),                                       # photo_store (path)
+        path,                                                   # photo_path_box
     )
 
 
 def load_uploaded_photo(file_path):
     if file_path is None:
-        return gr.update(), gr.update(), gr.update(), None
+        return gr.update(), gr.update(), gr.update(), ""
     pil = _to_pil(file_path)
+    path = _save_photo(pil)
+    print(f"[LOAD] upload → {path}", flush=True)
     return (
         gr.update(value=_make_canvas_html(pil), visible=True),  # canvas_selector
         gr.update(visible=False, value=None),                   # camera_capture
         gr.update(visible=True),                                # clear_photo_btn
-        _save_photo(pil),                                       # photo_store (path)
+        path,                                                   # photo_path_box
     )
 
 
@@ -558,6 +562,9 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+/* ── Hidden state textboxes (must stay rendered for Gradio to track values) ── */
+#photo-path-box, #crop-coords-box { display: none !important; }
 """
 
 HEADER_HTML = """
@@ -747,10 +754,12 @@ with gr.Blocks(title="Health Companion") as demo:
                 height=260,
                 visible=False,
             )
-            photo_path_box = gr.Textbox(value="", visible=False)
+            photo_path_box = gr.Textbox(
+                value="", elem_id="photo-path-box", container=False, label="",
+            )
             canvas_selector = gr.HTML(value="", visible=False)
             crop_coords_box = gr.Textbox(
-                value="", visible=False, elem_id="crop-coords-box",
+                value="", elem_id="crop-coords-box", container=False, label="",
             )
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
             with gr.Row(equal_height=True):
