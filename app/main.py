@@ -58,6 +58,7 @@ def _pil_to_b64(img) -> str:
 
 
 _CANVAS_HTML = """
+<div style="text-align:center;">
 <div id="rsel-wrap" style="position:relative;display:inline-block;max-width:100%;touch-action:none;line-height:0;">
   <img id="rsel-img" src="{src}" draggable="false"
        style="display:block;max-width:100%;max-height:380px;width:auto;height:auto;
@@ -67,6 +68,7 @@ _CANVAS_HTML = """
 <p style="margin:6px 0 0;font-size:0.83rem;color:#4d6a8a;text-align:center;line-height:1.4;">
   Drag to select an area &nbsp;·&nbsp; leave blank to read the whole image
 </p>
+</div>
 """
 
 
