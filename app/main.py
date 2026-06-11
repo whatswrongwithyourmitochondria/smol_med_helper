@@ -78,6 +78,46 @@ def _make_canvas_html(pil_img) -> str:
     return _CANVAS_HTML.format(src=_pil_to_b64(thumb))
 
 
+def _make_audio_html(audio_bytes: bytes) -> str:
+    import base64
+    import numpy as np
+    import soundfile as sf
+    from io import BytesIO
+
+    data, _ = sf.read(BytesIO(audio_bytes), dtype="float32")
+    if data.ndim > 1:
+        data = data.mean(axis=1)
+
+    n = 80
+    chunk = max(1, len(data) // n)
+    peaks = [float(np.abs(data[i * chunk:(i + 1) * chunk]).max()) for i in range(n)]
+    hi = max(peaks) or 1.0
+    peaks = [p / hi for p in peaks]
+
+    bw, gap, h = 4, 2, 48
+    w = n * (bw + gap)
+    bars = "".join(
+        f'<rect x="{i*(bw+gap)}" y="{(h - max(3, int(p*h))) // 2}" '
+        f'width="{bw}" height="{max(3, int(p*h))}" rx="1" fill="#00d2ff" opacity="0.8"/>'
+        for i, p in enumerate(peaks)
+    )
+    svg = (
+        f'<svg viewBox="0 0 {w} {h}" xmlns="http://www.w3.org/2000/svg" '
+        f'preserveAspectRatio="none" style="width:100%;height:{h}px;display:block;">'
+        f'{bars}</svg>'
+    )
+    audio_b64 = base64.b64encode(audio_bytes).decode()
+    return (
+        f'<div style="background:#0d1526;border:1px solid #192e50;'
+        f'border-radius:12px;padding:10px 14px;">'
+        f'{svg}'
+        f'<audio class="smc-autoplay" controls '
+        f'style="width:100%;height:36px;margin-top:8px;accent-color:#00d2ff;">'
+        f'<source src="data:audio/wav;base64,{audio_b64}" type="audio/wav">'
+        f'</audio></div>'
+    )
+
+
 def show_camera_capture():
     return (
         gr.update(visible=True, value=None),   # camera_capture
@@ -129,7 +169,7 @@ def clear_photo_selection(request: gr.Request):
         gr.update(value=None, visible=False), # camera_capture
         gr.update(visible=False),             # clear_photo_btn
         "",                                   # ocr_out
-        gr.update(value=None),                # ocr_audio_out
+        "",                                   # ocr_audio_out (gr.HTML)
         "",                                   # crop_coords_box
     )
 
@@ -180,10 +220,7 @@ def _do_ocr(image_path: str, crop_coords: str) -> tuple[str, str]:
 
     log_module.add_entry(result, entry_type="ocr")
     audio_bytes = speak(result)
-    tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-    tmp.write(audio_bytes)
-    tmp.close()
-    return result, tmp.name
+    return result, _make_audio_html(audio_bytes)
 
 
 def handle_ocr(crop_coords: str, request: gr.Request) -> tuple[str, str]:
@@ -559,8 +596,6 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 
 /* ── Audio ── */
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
-.waveform-container { overflow: hidden !important; }
-.waveform-container div.canvas { width: 100% !important; max-width: 100% !important; }
 
 /* ── Doctor Brief — compact scrollable box ── */
 .brief-box textarea {
@@ -607,6 +642,24 @@ CUSTOM_HEAD = """
         { attributes: true, attributeFilter: ['style'] }
     );
     [50, 200, 600, 1500].forEach(function (t) { setTimeout(fix, t); });
+}());
+
+// ── Autoplay for audio injected via gr.HTML ─────────────────────────────────
+(function () {
+    new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+            m.addedNodes.forEach(function (node) {
+                if (node.nodeType !== 1) return;
+                var els = node.classList && node.classList.contains('smc-autoplay')
+                    ? [node] : Array.from(node.querySelectorAll ? node.querySelectorAll('.smc-autoplay') : []);
+                els.forEach(function (a) {
+                    if (a._smc) return;
+                    a._smc = true;
+                    a.play().catch(function () {});
+                });
+            });
+        });
+    }).observe(document.documentElement, { childList: true, subtree: true });
 }());
 
 // ── Rectangle selector ──────────────────────────────────────────────────────
@@ -772,11 +825,7 @@ with gr.Blocks(title="Health Companion") as demo:
                 value="", elem_id="crop-coords-box", container=False, label="",
             )
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
-            ocr_audio_out = gr.Audio(
-                label="🔊  Reading",
-                autoplay=True,
-                interactive=False,
-            )
+            ocr_audio_out = gr.HTML(value="")
             ocr_out = gr.Textbox(
                 label="📄  Extracted text",
                 lines=7,
