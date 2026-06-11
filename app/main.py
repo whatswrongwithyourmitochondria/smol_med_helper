@@ -773,7 +773,7 @@ with gr.Blocks(title="Health Companion") as demo:
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
             ocr_audio_out = gr.Audio(
                 label="🔊  Reading",
-                autoplay=True,
+                autoplay=False,
                 interactive=False,
             )
             ocr_out = gr.Textbox(
