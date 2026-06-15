@@ -501,8 +501,12 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
 ::-webkit-scrollbar-track { background: var(--cream); }
 ::-webkit-scrollbar-thumb { background: var(--mut); border-radius: 4px; }
 
-/* ── Blue photo-attach button ── */
+/* ── Blue photo-attach button — targets label (Gradio UploadButton renders label not button) ── */
+.photo-attach-btn label,
 .photo-attach-btn button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     background: var(--blue) !important;
     color: #fff !important;
     border: 3px solid var(--ink) !important;
@@ -515,27 +519,32 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
     font-size: 0.9rem !important;
     cursor: pointer !important;
     transition: transform 0.13s ease, box-shadow 0.13s ease !important;
+    padding: 0 16px !important;
+    gap: 8px !important;
 }
+.photo-attach-btn label:hover,
 .photo-attach-btn button:hover {
     transform: translateY(-2px) !important;
     box-shadow: 3px 6px 0 var(--ink) !important;
 }
+.photo-attach-btn label:active,
 .photo-attach-btn button:active {
     transform: translateY(1px) !important;
     box-shadow: 1px 2px 0 var(--ink) !important;
 }
 
-/* ── Falling hearts — behind all content ── */
+/* ── Falling hearts — visible on golden BG, behind Gradio content ── */
 @keyframes fall {
     0%   { transform: translateY(-60px) rotate(0deg);   opacity: 0; }
-    10%  { opacity: .5; }
-    90%  { opacity: .5; }
+    10%  { opacity: .55; }
+    90%  { opacity: .55; }
     100% { transform: translateY(110vh) rotate(220deg); opacity: 0; }
 }
 .heart-fall {
-    position: fixed; pointer-events: none; z-index: -1; user-select: none;
+    position: fixed; pointer-events: none; z-index: 1; user-select: none;
     animation: fall linear infinite;
 }
+.gradio-container { position: relative; z-index: 2; }
 
 /* ── Hidden crop-coords box ── */
 #crop-coords-box { display: none !important; }
@@ -557,7 +566,7 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
 
 HEADER_HTML = """
 <div class="app-header">
-    <h1 class="app-title">Patient <span style="color:#2F6FE0">Scribe</span></h1>
+    <h1 class="app-title" style="color:#2F6FE0">Patient Scribe</h1>
     <p class="app-sub">voice-first &nbsp;·&nbsp; camera &nbsp;·&nbsp; appointment-ready</p>
 </div>
 """
@@ -588,6 +597,24 @@ CUSTOM_HEAD = """
     } else {
         spawnHearts();
     }
+}());
+
+// ── Rename Gradio's built-in "Record" button to "Speak" ─────────────────────
+(function () {
+    function renameRecord() {
+        document.querySelectorAll('button').forEach(function (btn) {
+            var t = btn.textContent.trim();
+            if (t === 'Record' || t === '⏺ Record') {
+                btn.childNodes.forEach(function (n) {
+                    if (n.nodeType === 3 && n.textContent.trim() === 'Record') {
+                        n.textContent = ' Speak';
+                    }
+                });
+            }
+        });
+    }
+    [300, 800, 2000].forEach(function (t) { setTimeout(renameRecord, t); });
+    new MutationObserver(renameRecord).observe(document.body, { childList: true, subtree: true });
 }());
 
 // ── Autoplay for audio injected via gr.HTML ─────────────────────────────────
@@ -741,7 +768,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 lambda: (None, gr.update(visible=False)),
                 outputs=[checkin_photo_state, checkin_photo_clear_btn],
             )
-            checkin_btn = gr.Button("⬆️  Log Check-in", variant="primary")
+            checkin_btn = gr.Button("Log Check-in", variant="primary")
             transcript_out = gr.Textbox(
                 label="📝  What I heard",
                 lines=4,
