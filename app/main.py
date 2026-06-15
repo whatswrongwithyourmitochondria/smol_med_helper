@@ -501,13 +501,13 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
 ::-webkit-scrollbar-track { background: var(--cream); }
 ::-webkit-scrollbar-thumb { background: var(--mut); border-radius: 4px; }
 
-/* ── Blue photo-attach button — targets label (Gradio UploadButton renders label not button) ── */
+/* ── Red photo-attach button (targets label — Gradio UploadButton renders <label>) ── */
 .photo-attach-btn label,
 .photo-attach-btn button {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    background: var(--blue) !important;
+    background: var(--red) !important;
     color: #fff !important;
     border: 3px solid var(--ink) !important;
     box-shadow: 3px 4px 0 var(--ink) !important;
@@ -531,6 +531,20 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
 .photo-attach-btn button:active {
     transform: translateY(1px) !important;
     box-shadow: 1px 2px 0 var(--ink) !important;
+}
+
+/* ── Green Log Check-in button ── */
+.checkin-log-btn button {
+    background: #27AE60 !important;
+    box-shadow: 5px 6px 0 var(--ink) !important;
+}
+.checkin-log-btn button:hover {
+    background: #219150 !important;
+    box-shadow: 5px 9px 0 var(--ink) !important;
+}
+.checkin-log-btn button:active {
+    background: #1a7a42 !important;
+    box-shadow: 2px 3px 0 var(--ink) !important;
 }
 
 /* ── Falling hearts — visible on golden BG, behind Gradio content ── */
@@ -597,24 +611,6 @@ CUSTOM_HEAD = """
     } else {
         spawnHearts();
     }
-}());
-
-// ── Rename Gradio's built-in "Record" button to "Speak" ─────────────────────
-(function () {
-    function renameRecord() {
-        document.querySelectorAll('button').forEach(function (btn) {
-            var t = btn.textContent.trim();
-            if (t === 'Record' || t === '⏺ Record') {
-                btn.childNodes.forEach(function (n) {
-                    if (n.nodeType === 3 && n.textContent.trim() === 'Record') {
-                        n.textContent = ' Speak';
-                    }
-                });
-            }
-        });
-    }
-    [300, 800, 2000].forEach(function (t) { setTimeout(renameRecord, t); });
-    new MutationObserver(renameRecord).observe(document.body, { childList: true, subtree: true });
 }());
 
 // ── Autoplay for audio injected via gr.HTML ─────────────────────────────────
@@ -768,7 +764,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 lambda: (None, gr.update(visible=False)),
                 outputs=[checkin_photo_state, checkin_photo_clear_btn],
             )
-            checkin_btn = gr.Button("Log Check-in", variant="primary")
+            checkin_btn = gr.Button("Log Check-in", variant="primary", elem_classes=["checkin-log-btn"])
             transcript_out = gr.Textbox(
                 label="📝  What I heard",
                 lines=4,
