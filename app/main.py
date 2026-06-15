@@ -28,12 +28,12 @@ _session_photos: dict[str, str] = {}  # session_hash → full-res temp file path
 
 # ── Handlers ──────────────────────────────────────────────────────────────────
 
-def handle_checkin(audio_path: str | None) -> str:
+def handle_checkin(audio_path: str | None, photo_path: str | None) -> tuple[str, None]:
     if not audio_path:
-        return ""
+        return "", photo_path
     transcript = transcribe(audio_path)
-    log_module.add_entry(transcript, entry_type="checkin")
-    return transcript
+    log_module.add_entry(transcript, entry_type="checkin", photo=photo_path or None)
+    return transcript, None  # clear photo state after logging
 
 
 def _to_pil(source):
@@ -219,6 +219,9 @@ def handle_ocr(crop_coords: str, request: gr.Request) -> tuple[str, str]:
     return _do_ocr(image_path, crop_coords)
 
 
+_DATE_PREFIX_RE = __import__("re").compile(r"\d{4}-\d{2}-\d{2}[:\s]*")
+
+
 def _speech_text_from_markdown(text: str) -> str:
     lines = []
     for line in text.splitlines():
@@ -233,18 +236,27 @@ def _speech_text_from_markdown(text: str) -> str:
             continue
         if stripped.startswith("- "):
             stripped = stripped[2:].strip()
-        lines.append(stripped.replace("#", "").strip())
+        stripped = _DATE_PREFIX_RE.sub("", stripped)
+        stripped = stripped.replace("#", "").strip()
+        if stripped:
+            lines.append(stripped)
     return "\n".join(line for line in lines if line).strip()
 
 
 @spaces.GPU(duration=120)
-def handle_brief(days: int) -> tuple:
+def handle_brief(days: int) -> tuple[str, object]:
     brief_text = generate_brief(days=int(days))
+    return brief_text, gr.update(visible=False)
+
+
+def handle_brief_read(brief_text: str) -> object:
+    if not brief_text or brief_text.startswith("No log"):
+        return gr.update(visible=False)
     audio_bytes = speak(_speech_text_from_markdown(brief_text))
     tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     tmp.write(audio_bytes)
     tmp.close()
-    return brief_text, gr.update(visible=True, value=tmp.name)
+    return gr.update(visible=True, value=tmp.name)
 
 
 def handle_history() -> str:
@@ -754,12 +766,24 @@ with gr.Blocks(title="Health Companion") as demo:
                 'then <strong style="color:#7a92aa;">Stop</strong>.</p>'
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
-                'The app logs it and shows what it heard.</p>'
+                'Optionally attach a photo — it will appear as a link in your doctor brief.</p>'
             )
             audio_in = gr.Audio(
                 sources=["microphone"],
                 type="filepath",
                 label="🎙️  Your voice",
+            )
+            checkin_photo_btn = gr.UploadButton(
+                "📷  Attach photo (optional)",
+                file_types=["image"],
+                type="filepath",
+                variant="secondary",
+            )
+            checkin_photo_state = gr.State(None)
+            checkin_photo_btn.upload(
+                lambda p: p,
+                inputs=checkin_photo_btn,
+                outputs=checkin_photo_state,
             )
             checkin_btn = gr.Button("⬆️  Log Check-in", variant="primary")
             transcript_out = gr.Textbox(
@@ -769,8 +793,8 @@ with gr.Blocks(title="Health Companion") as demo:
             )
             checkin_btn.click(
                 handle_checkin,
-                inputs=audio_in,
-                outputs=transcript_out,
+                inputs=[audio_in, checkin_photo_state],
+                outputs=[transcript_out, checkin_photo_state],
             )
 
         # ── 📷 Camera & Read ──────────────────────────────────────────────────
@@ -863,25 +887,28 @@ with gr.Blocks(title="Health Companion") as demo:
                 label="📅  Days to include",
             )
             brief_btn = gr.Button("📋  Generate Brief", variant="primary")
-            with gr.Row(equal_height=True):
-                brief_out = gr.Textbox(
-                    label="📄  Doctor brief",
-                    lines=8,
-                    interactive=False,
-                    elem_classes=["brief-box"],
-                    scale=3,
-                )
-                brief_audio_out = gr.Audio(
-                    label="🔊  Brief read aloud",
-                    autoplay=True,
-                    interactive=False,
-                    scale=2,
-                    visible=False,
-                )
+            brief_out = gr.Textbox(
+                label="📄  Doctor brief",
+                lines=8,
+                interactive=False,
+                elem_classes=["brief-box"],
+            )
+            read_brief_btn = gr.Button("🔊  Read Aloud", variant="secondary")
+            brief_audio_out = gr.Audio(
+                label="🔊  Brief read aloud",
+                autoplay=False,
+                interactive=False,
+                visible=False,
+            )
             brief_btn.click(
                 handle_brief,
                 inputs=days_slider,
                 outputs=[brief_out, brief_audio_out],
+            )
+            read_brief_btn.click(
+                handle_brief_read,
+                inputs=brief_out,
+                outputs=brief_audio_out,
             )
 
         # ── 📖 History ────────────────────────────────────────────────────────

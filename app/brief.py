@@ -61,7 +61,10 @@ def _section(title: str, items: list[str]) -> str:
 
 def _summarize_entry(d: date, entry: dict) -> str:
     content = " ".join(str(entry.get("content", "")).split())
-    return f"{d.isoformat()}: {content}"
+    result = f"{d.isoformat()}: {content}"
+    if entry.get("photo"):
+        result += " (see image)"
+    return result
 
 
 def _looks_like_reading(content: str) -> bool:

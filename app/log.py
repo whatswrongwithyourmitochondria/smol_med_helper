@@ -27,10 +27,17 @@ def _save(d: date, data: dict) -> None:
     _log_path(d).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def add_entry(content: str, entry_type: EntryType = "checkin", d: date | None = None) -> dict:
+def add_entry(
+    content: str,
+    entry_type: EntryType = "checkin",
+    d: date | None = None,
+    photo: str | None = None,
+) -> dict:
     d = d or date.today()
     data = _load(d)
-    entry = {"type": entry_type, "content": content, "ts": datetime.utcnow().isoformat()}
+    entry: dict = {"type": entry_type, "content": content, "ts": datetime.utcnow().isoformat()}
+    if photo:
+        entry["photo"] = photo
     data["entries"].append(entry)
     _save(d, data)
     return entry
