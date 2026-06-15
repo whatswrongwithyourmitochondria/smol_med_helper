@@ -302,6 +302,12 @@ html, body {
     overflow-x: hidden !important;
     max-width: 100% !important;
 }
+/* Always reserve the vertical scrollbar so the viewport width never changes
+   between tabs — otherwise the fixed/cover background re-fits and "jumps". */
+html {
+    overflow-y: scroll !important;
+    scrollbar-gutter: stable !important;
+}
 
 /* ── Tokens + Gradio primary override ── */
 :root {
