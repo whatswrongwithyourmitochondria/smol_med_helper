@@ -7,6 +7,15 @@ from datetime import date, timedelta
 
 from app import log as log_module
 
+_COMPRESS_SYSTEM = """Condense this health log brief for a doctor's appointment.
+Keep EXACTLY these six section headers: ## New, ## Changed, ## Resolved, ## Ongoing, ## Readings, ## Questions to raise
+- At most 2 compact bullet points per section
+- Merge repeated mentions; keep all dates and numbers
+- Plain spoken English — this will be read aloud to the patient
+- If a section has nothing, write exactly: Nothing to report.
+- NEVER diagnose conditions or advise on medications"""
+
+
 BRIEF_SYSTEM = """Generate a structured doctor appointment brief. Use EXACTLY these six sections:
 
 ## New
@@ -112,9 +121,7 @@ def generate_brief(days: int = 30, end: date | None = None) -> str:
             if question not in questions:
                 questions.append(question)
 
-    # This deterministic MVP avoids diagnostic conclusions. It lists confirmed
-    # log facts and leaves change/resolution interpretation for the clinician.
-    return "\n\n".join(
+    raw = "\n\n".join(
         [
             _section("New", narrative[:8]),
             _section("Changed", []),
@@ -124,3 +131,13 @@ def generate_brief(days: int = 30, end: date | None = None) -> str:
             _section("Questions to raise", questions[:8]),
         ]
     )
+    return _compress_brief(raw)
+
+
+def _compress_brief(raw: str) -> str:
+    try:
+        from app.llm import complete
+        return complete(raw, extra_system=_COMPRESS_SYSTEM)
+    except Exception as exc:
+        print(f"[brief] LLM compression failed: {exc}", flush=True)
+        return raw

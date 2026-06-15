@@ -65,7 +65,7 @@ _CANVAS_HTML = """
               user-select:none;-webkit-user-drag:none;">
   <canvas id="rsel-cvs" style="position:absolute;top:0;left:0;cursor:crosshair;touch-action:none;"></canvas>
 </div>
-<p style="margin:6px 0 0;font-size:0.83rem;color:#4d6a8a;text-align:center;line-height:1.4;">
+<p style="margin:6px 0 0;font-size:0.83rem;color:#8a8064;text-align:center;line-height:1.4;">
   Drag to select an area &nbsp;·&nbsp; leave blank to read the whole image
 </p>
 </div>
@@ -223,7 +223,8 @@ _DATE_PREFIX_RE = __import__("re").compile(r"\d{4}-\d{2}-\d{2}[:\s]*")
 
 
 def _speech_text_from_markdown(text: str) -> str:
-    lines = []
+    import re as _re
+    lines = ["Doctor's brief."]  # spoken intro and TTS warm-up token
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped:
@@ -232,7 +233,7 @@ def _speech_text_from_markdown(text: str) -> str:
         if stripped.startswith("##"):
             heading = stripped.lstrip("#").strip()
             if heading:
-                lines.append(f"{heading}.")
+                lines.append(f"\n{heading}.")
             continue
         if stripped.startswith("- "):
             stripped = stripped[2:].strip()
@@ -240,7 +241,8 @@ def _speech_text_from_markdown(text: str) -> str:
         stripped = stripped.replace("#", "").strip()
         if stripped:
             lines.append(stripped)
-    return "\n".join(line for line in lines if line).strip()
+    result = "\n".join(lines)
+    return _re.sub(r"\n{3,}", "\n\n", result).strip()
 
 
 @spaces.GPU(duration=120)
@@ -274,48 +276,25 @@ def handle_history() -> str:
 # ── Design ────────────────────────────────────────────────────────────────────
 
 CSS = """
-/* @import not allowed in constructable stylesheets — fonts loaded via head param instead */
+/* Festa style — Fredoka + cream cards + chunky ink borders */
 
-/* ── Mobile overflow guard ── */
-html, body {
-    overflow-x: hidden !important;
-    max-width: 100% !important;
-}
+html, body { overflow-x: hidden !important; max-width: 100% !important; }
 
-/* ── Tokens + Gradio primary override ── */
 :root {
-    --bg:       #070b16;
-    --surface:  #0d1526;
-    --surface2: #111e35;
-    --border:   #192e50;
-    --text:     #dde6f5;
-    --muted:    #4d6a8a;
-    --cyan:     #00d2ff;
-    --blue:     #3a7bd5;
-    --purple:   #c471ed;
-    --grad:     linear-gradient(270deg, #00d2ff, #3a7bd5, #c471ed, #00d2ff);
-
-    /* Override Gradio's orange primary — affects tab underline, slider, focus rings */
-    --primary-50:  #ecfeff;
-    --primary-100: #cffafe;
-    --primary-200: #a5f3fc;
-    --primary-300: #67e8f9;
-    --primary-400: #22d3ee;
-    --primary-500: #00d2ff;
-    --primary-600: #0891b2;
-    --primary-700: #0e7490;
-    --primary-800: #155e75;
-    --primary-900: #164e63;
-    --primary-950: #083344;
-    --color-accent: #00d2ff;
+    --cream:  #FBF7EC;
+    --ink:    #1E160C;
+    --bg:     #cdbf86;
+    --blue:   #2F6FE0;
+    --red:    #D8362B;
+    --mut:    #8a8064;
+    --butter: #F7E27C;
 }
 
-/* ── Base ── */
 *, *::before, *::after { box-sizing: border-box; }
 body, .gradio-container {
     background: var(--bg) !important;
-    font-family: 'Inter', sans-serif !important;
-    color: var(--text) !important;
+    font-family: 'Fredoka', sans-serif !important;
+    color: var(--ink) !important;
 }
 .gradio-container { max-width: 960px !important; margin: 0 auto !important; }
 .contain, .wrap, .svelte-1gfkn6j { background: transparent !important; }
@@ -323,150 +302,122 @@ body, .gradio-container {
 /* ── Hero header ── */
 .app-header {
     text-align: center;
-    padding: 2.2rem 1rem 1.2rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 1.4rem;
+    padding: 2rem 1rem 1.2rem;
+    margin-bottom: 1.2rem;
 }
 .app-title {
-    font-family: 'Tomorrow', monospace;
-    font-size: clamp(1.9rem, 5vw, 2.8rem);
+    font-family: 'Fredoka', sans-serif;
+    font-size: clamp(2rem, 6vw, 3rem);
     font-weight: 700;
-    letter-spacing: 3px;
-    background: linear-gradient(95deg, #00d2ff 0%, #3a7bd5 48%, #c471ed 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--ink);
     margin: 0 0 6px;
     line-height: 1.1;
 }
 .app-sub {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Fredoka', sans-serif;
     font-size: 0.9rem;
-    color: var(--muted) !important;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
+    color: var(--mut);
+    letter-spacing: 0.5px;
     margin: 0;
 }
 
-/* ── Tabs — element-prefixed so Gradio's CSS parser keeps them ── */
-div.tab-container {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
+/* ── Cards / blocks ── */
+.block, .gr-group, .panel, .form {
+    background: var(--cream) !important;
+    border: 3px solid var(--ink) !important;
     border-radius: 18px !important;
-    padding: 7px !important;
+    box-shadow: 5px 6px 0 var(--ink) !important;
+}
+
+/* ── Tabs — chunky chips ── */
+div.tab-container {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
     margin-bottom: 14px !important;
-    gap: 4px !important;
+    gap: 9px !important;
     justify-content: center !important;
 }
 button.svelte-11gaq1 {
-    font-family: 'Tomorrow', monospace !important;
-    font-size: 0.8rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.5px !important;
-    border-radius: 12px !important;
-    padding: 13px 20px !important;
+    font-family: 'Fredoka', sans-serif !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    border-radius: 14px !important;
+    padding: 9px 14px !important;
     min-height: 46px !important;
-    border: none !important;
-    border-bottom: none !important;
-    background: transparent !important;
-    color: var(--muted) !important;
-    transition: all 0.22s ease !important;
+    border: 3px solid var(--ink) !important;
+    background: var(--cream) !important;
+    color: var(--ink) !important;
+    box-shadow: 3px 4px 0 var(--ink) !important;
+    transition: transform 0.13s ease, box-shadow 0.13s ease !important;
     white-space: nowrap !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 5px !important;
-    line-height: 1 !important;
-    vertical-align: middle !important;
 }
-/* Nudge emoji glyphs to sit on the same optical baseline as the label text */
-button.svelte-11gaq1 > * { vertical-align: middle !important; }
 button.svelte-11gaq1:hover:not(.selected) {
-    background: var(--surface2) !important;
-    color: var(--text) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 3px 6px 0 var(--ink) !important;
 }
 button.selected.svelte-11gaq1 {
-    background: transparent !important;
-    color: #f97316 !important;
-    border: none !important;
-    border-bottom: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    text-shadow: none !important;
-}
-/* Kill the orange underline — (0,2,2) beats Gradio's (0,2,1) and has !important */
-button.selected.svelte-11gaq1::after {
-    background-color: transparent !important;
-    background: transparent !important;
-    display: none !important;
-    height: 0 !important;
-}
-
-/* ── Cards / blocks ── */
-.block, .gr-group, .panel, .form {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 18px !important;
-}
-
-/* ── Section hints ── */
-.hint {
-    text-align: center !important;
-}
-.hint p {
-    text-align: center !important;
-    color: var(--muted) !important;
-    font-size: 0.93rem !important;
-    line-height: 1.65 !important;
-    margin: 0 0 0.5rem !important;
-}
-
-/* ── Animated primary button ── */
-@keyframes aurora {
-    0%   { background-position:   0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position:   0% 50%; }
-}
-@keyframes opalhue {
-    0%   { filter: hue-rotate(  0deg) brightness(1.00) saturate(1.10); }
-    25%  { filter: hue-rotate( 25deg) brightness(1.12) saturate(1.35); }
-    50%  { filter: hue-rotate(-15deg) brightness(1.18) saturate(1.40); }
-    75%  { filter: hue-rotate( 20deg) brightness(1.10) saturate(1.30); }
-    100% { filter: hue-rotate(  0deg) brightness(1.00) saturate(1.10); }
-}
-
-button.primary {
-    font-family: 'Tomorrow', monospace !important;
-    font-weight: 700 !important;
-    font-size: 1.08rem !important;
-    letter-spacing: 0.8px !important;
-    min-height: 62px !important;
-    border-radius: 14px !important;
-    border: none !important;
-    background: linear-gradient(270deg, #92400e, #c2410c, #ea580c, #f59e0b, #fbbf24, #f59e0b, #ea580c, #c2410c, #92400e) !important;
-    background-size: 300% 300% !important;
-    animation: aurora 9s ease infinite !important;
+    background: var(--red) !important;
     color: #fff !important;
-    box-shadow: 0 4px 28px rgba(234,88,12,0.20), 0 1px 0 rgba(255,255,255,0.10) inset !important;
+    box-shadow: 3px 4px 0 var(--ink) !important;
+}
+button.selected.svelte-11gaq1::after { display: none !important; }
+
+/* ── Primary button ── */
+button.primary {
+    font-family: 'Fredoka', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    min-height: 56px !important;
+    border-radius: 44px !important;
+    border: 3px solid var(--ink) !important;
+    background: var(--red) !important;
+    color: #fff !important;
+    box-shadow: 5px 6px 0 var(--ink) !important;
     cursor: pointer !important;
-    transition: transform 0.18s ease, box-shadow 0.18s ease !important;
+    transition: transform 0.13s ease, box-shadow 0.13s ease !important;
 }
 button.primary:hover {
     transform: translateY(-3px) !important;
-    animation: aurora 9s ease infinite, opalhue 1.6s linear infinite !important;
-    box-shadow: 0 12px 40px rgba(234,88,12,0.35),
-                0 0 28px rgba(200,255,240,0.10),
-                0 1px 0 rgba(255,255,255,0.15) inset !important;
+    box-shadow: 5px 9px 0 var(--ink) !important;
 }
 button.primary:active {
-    transform: translateY(1px) !important;
-    box-shadow: 0 2px 10px rgba(234,88,12,0.14) !important;
+    transform: translateY(2px) !important;
+    box-shadow: 2px 3px 0 var(--ink) !important;
 }
 
+/* ── Secondary button ── */
+button.secondary {
+    font-family: 'Fredoka', sans-serif !important;
+    font-size: 0.9rem !important;
+    font-weight: 600 !important;
+    min-height: 48px !important;
+    border-radius: 14px !important;
+    background: var(--cream) !important;
+    border: 3px solid var(--ink) !important;
+    color: var(--ink) !important;
+    box-shadow: 3px 4px 0 var(--ink) !important;
+    transition: transform 0.13s ease, box-shadow 0.13s ease !important;
+}
+button.secondary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 3px 6px 0 var(--ink) !important;
+}
+button.secondary:active {
+    transform: translateY(1px) !important;
+    box-shadow: 1px 2px 0 var(--ink) !important;
+}
+
+/* ── Source-actions row ── */
 .source-actions {
     justify-content: center !important;
     align-items: stretch !important;
-    gap: 14px !important;
+    gap: 12px !important;
     margin: 0 0 16px !important;
 }
 .source-actions .source-button {
@@ -480,19 +431,11 @@ button.primary:active {
 .source-actions .source-button button,
 .source-actions button {
     width: 100% !important;
-    min-height: 58px !important;
+    min-height: 52px !important;
     min-width: 0 !important;
     border-radius: 14px !important;
 }
-.source-actions .clear-photo-button {
-    flex: 0 0 92px !important;
-    max-width: 92px !important;
-}
-.source-actions .clear-photo-button button {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    font-size: 1rem !important;
-}
+.source-actions .clear-photo-button { flex: 0 0 80px !important; max-width: 80px !important; }
 .source-actions .upload-button,
 .source-actions .file-preview,
 .source-actions .wrap,
@@ -503,100 +446,49 @@ button.primary:active {
     box-shadow: none !important;
     padding: 0 !important;
 }
-@media (max-width: 640px) {
-    .source-actions {
-        flex-direction: column !important;
-    }
-    .source-actions .clear-photo-button {
-        flex: 1 1 auto !important;
-        max-width: none !important;
-    }
-
-    /* Tab bar: 2×2 grid so all four tabs fit without overflow */
-    div.tab-container {
-        flex-wrap: wrap !important;
-        height: auto !important;
-    }
-    /* The wrapper's height comes from the invisible clone — let it grow too */
-    .tab-wrapper.svelte-11gaq1 {
-        height: auto !important;
-        overflow: visible !important;
-    }
-    button.svelte-11gaq1 {
-        flex: 1 1 calc(50% - 8px) !important;
-        min-width: 0 !important;
-        padding: 11px 8px !important;
-        font-size: 0.72rem !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
-}
-
-/* ── Secondary button ── */
-button.secondary {
-    font-family: 'Tomorrow', monospace !important;
-    font-size: 0.95rem !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.4px !important;
-    min-height: 50px !important;
-    border-radius: 12px !important;
-    background: var(--surface2) !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text) !important;
-    transition: all 0.2s ease !important;
-}
-button.secondary:hover {
-    border-color: rgba(0,210,255,0.4) !important;
-    color: var(--cyan) !important;
-    box-shadow: 0 0 16px rgba(0,210,255,0.1) !important;
-}
 
 /* ── Text inputs ── */
 textarea, input[type=text], input[type=number], input[type=search] {
-    background: var(--bg) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 10px !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 1.1rem !important;
-    line-height: 1.6 !important;
-    color: var(--text) !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
+    background: #fffdf6 !important;
+    border: 2.5px solid var(--ink) !important;
+    border-radius: 12px !important;
+    font-family: 'Fredoka', sans-serif !important;
+    font-size: 1rem !important;
+    color: var(--ink) !important;
 }
 textarea:focus, input:focus {
-    border-color: rgba(0,210,255,0.5) !important;
-    box-shadow: 0 0 0 3px rgba(0,210,255,0.1) !important;
+    border-color: var(--blue) !important;
+    box-shadow: 0 0 0 3px rgba(47,111,224,0.15) !important;
     outline: none !important;
 }
 
 /* ── Labels ── */
 label > span, .label-wrap > span {
-    font-family: 'Tomorrow', monospace !important;
-    font-size: 0.76rem !important;
-    letter-spacing: 1px !important;
+    font-family: 'Fredoka', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: var(--mut) !important;
     text-transform: uppercase !important;
-    color: var(--muted) !important;
 }
 
 /* ── History markdown ── */
-.prose p, .prose li { color: var(--text) !important; font-size: 1.05rem !important; line-height: 1.7 !important; }
+.prose p, .prose li { color: var(--ink) !important; font-size: 1rem !important; line-height: 1.7 !important; }
 .prose h3 {
-    font-family: 'Tomorrow', monospace !important;
-    color: var(--cyan) !important;
-    font-size: 0.9rem !important;
-    letter-spacing: 1px !important;
-    border-bottom: 1px solid var(--border) !important;
-    padding-bottom: 5px !important;
-    margin: 1.4rem 0 0.5rem !important;
+    font-family: 'Fredoka', sans-serif !important;
+    color: var(--blue) !important;
+    font-size: 1rem !important;
+    border-bottom: 2px solid var(--ink) !important;
+    padding-bottom: 4px !important;
+    margin: 1.2rem 0 0.4rem !important;
 }
 
 /* ── Slider ── */
-input[type=range] { accent-color: var(--cyan) !important; height: 6px !important; }
+input[type=range] { accent-color: var(--red) !important; height: 6px !important; }
 
 /* ── Audio ── */
-.waveform-container, .waveform-container * { background: var(--bg) !important; }
+.waveform-container, .waveform-container * { background: #fffdf6 !important; }
 
-/* ── Doctor Brief — compact scrollable box ── */
+/* ── Doctor Brief compact box ── */
 .brief-box textarea {
     min-height: 180px !important;
     max-height: 260px !important;
@@ -606,41 +498,72 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb { background: var(--mut); border-radius: 4px; }
 
-/* ── Hidden crop-coords textbox (must stay rendered for Gradio to track its value) ── */
+/* ── Falling hearts ── */
+@keyframes fall {
+    0%   { transform: translateY(-40px) rotate(0deg);   opacity: 0; }
+    10%  { opacity: .45; }
+    90%  { opacity: .45; }
+    100% { transform: translateY(110vh) rotate(220deg); opacity: 0; }
+}
+.heart-fall {
+    position: fixed; pointer-events: none; z-index: 0; user-select: none;
+    animation: fall linear infinite;
+}
+
+/* ── Hidden crop-coords box ── */
 #crop-coords-box { display: none !important; }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+    .source-actions { flex-direction: column !important; }
+    .source-actions .clear-photo-button { flex: 1 1 auto !important; max-width: none !important; }
+    div.tab-container { flex-wrap: wrap !important; height: auto !important; }
+    .tab-wrapper.svelte-11gaq1 { height: auto !important; overflow: visible !important; }
+    button.svelte-11gaq1 {
+        flex: 1 1 calc(50% - 8px) !important;
+        min-width: 0 !important;
+        padding: 9px 6px !important;
+        font-size: 0.66rem !important;
+    }
+}
 """
 
 HEADER_HTML = """
 <div class="app-header">
-    <h1 class="app-title">Health Companion</h1>
-    <p class="app-sub">Voice-first &nbsp;·&nbsp; Camera-assisted &nbsp;·&nbsp; Appointment-ready</p>
+    <h1 class="app-title">Health <span style="color:#2F6FE0">Companion</span></h1>
+    <p class="app-sub">voice-first &nbsp;·&nbsp; camera &nbsp;·&nbsp; appointment-ready</p>
 </div>
 """
 
-# Fonts + accent-colour fix injected via <head> so @import and <script> both work.
 CUSTOM_HEAD = """
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Tomorrow:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>
+// ── Falling hearts ───────────────────────────────────────────────────────────
 (function () {
-    var CYAN = '#00d2ff';
-    var PROPS = ['--color-accent', '--primary-500', '--primary-400', '--primary-600'];
-    function fix() {
-        PROPS.forEach(function (p) {
-            document.documentElement.style.setProperty(p, CYAN);
-        });
+    function spawnHearts() {
+        var glyphs = ['❤️','🧡','🩷','💛','💙'];
+        for (var i = 0; i < 14; i++) {
+            var h = document.createElement('span');
+            h.className = 'heart-fall';
+            h.textContent = glyphs[i % glyphs.length];
+            h.style.left = (Math.random() * 94) + '%';
+            h.style.top = '-40px';
+            h.style.fontSize = (13 + Math.random() * 14) + 'px';
+            h.style.animationDuration = (7 + Math.random() * 7) + 's';
+            h.style.animationDelay = (-Math.random() * 10) + 's';
+            document.body.appendChild(h);
+        }
     }
-    fix();
-    new MutationObserver(fix).observe(
-        document.documentElement,
-        { attributes: true, attributeFilter: ['style'] }
-    );
-    [50, 200, 600, 1500].forEach(function (t) { setTimeout(fix, t); });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', spawnHearts);
+    } else {
+        spawnHearts();
+    }
 }());
 
 // ── Autoplay for audio injected via gr.HTML ─────────────────────────────────
@@ -680,11 +603,11 @@ CUSTOM_HEAD = """
         function draw() {
             ctx.clearRect(0, 0, cvs.width, cvs.height);
             if (rw > 4 && rh > 4) {
-                ctx.strokeStyle = '#00d2ff';
+                ctx.strokeStyle = '#2F6FE0';
                 ctx.lineWidth   = 2;
                 ctx.setLineDash([6, 3]);
                 ctx.strokeRect(rx, ry, rw, rh);
-                ctx.fillStyle = 'rgba(0,210,255,0.08)';
+                ctx.fillStyle = 'rgba(47,111,224,0.08)';
                 ctx.fillRect(rx, ry, rw, rh);
             }
         }
@@ -741,11 +664,11 @@ CUSTOM_HEAD = """
 # ── UI ────────────────────────────────────────────────────────────────────────
 
 THEME = gr.themes.Base(
-    primary_hue="cyan",
+    primary_hue="red",
     secondary_hue="blue",
-    neutral_hue="slate",
-    font=gr.themes.GoogleFont("Tomorrow"),
-    font_mono=gr.themes.GoogleFont("Tomorrow"),
+    neutral_hue="yellow",
+    font=gr.themes.GoogleFont("Fredoka"),
+    font_mono=gr.themes.GoogleFont("Fredoka"),
 )
 
 with gr.Blocks(title="Health Companion") as demo:
@@ -757,11 +680,11 @@ with gr.Blocks(title="Health Companion") as demo:
         # ── 🎙️ Check-in ───────────────────────────────────────────────────────
         with gr.Tab("🎙️  Check-in"):
             gr.HTML(
-                '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
+                '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
-                'Press <strong style="color:#7a92aa;">Record</strong> and speak your check-in, '
-                'then <strong style="color:#7a92aa;">Stop</strong>.</p>'
-                '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
+                'Press <strong style="color:#2F6FE0;">Record</strong> and speak your check-in, '
+                'then <strong style="color:#2F6FE0;">Stop</strong>.</p>'
+                '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'Optionally attach a photo — it will appear as a link in your doctor brief.</p>'
             )
@@ -809,11 +732,11 @@ with gr.Blocks(title="Health Companion") as demo:
         # ── 📷 Camera & Read ──────────────────────────────────────────────────
         with gr.Tab("📷  Camera & Read"):
             gr.HTML(
-                '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
+                '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
-                'Point the camera at a <strong style="color:#7a92aa;">medicine box</strong>, '
+                'Point the camera at a <strong style="color:#2F6FE0;">medicine box</strong>, '
                 'device screen, or letter.</p>'
-                '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
+                '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
             )
@@ -882,11 +805,11 @@ with gr.Blocks(title="Health Companion") as demo:
         # ── 📋 Doctor Brief ───────────────────────────────────────────────────
         with gr.Tab("📋  Doctor Brief"):
             gr.HTML(
-                '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
+                '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
-                'Generates a <strong style="color:#7a92aa;">change-focused brief</strong> '
+                'Generates a <strong style="color:#2F6FE0;">change-focused brief</strong> '
                 'with six sections.</p>'
-                '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
+                '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'New &nbsp;·&nbsp; Changed &nbsp;·&nbsp; Resolved &nbsp;·&nbsp; '
                 'Ongoing &nbsp;·&nbsp; Readings &nbsp;·&nbsp; Questions to raise.</p>'
@@ -918,7 +841,7 @@ with gr.Blocks(title="Health Companion") as demo:
         # ── 📖 History ────────────────────────────────────────────────────────
         with gr.Tab("📖  History"):
             gr.HTML(
-                '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
+                '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">Last 7 days of log entries.</p>'
             )
             refresh_btn = gr.Button("🔄  Refresh", variant="secondary")
