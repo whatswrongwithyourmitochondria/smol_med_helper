@@ -233,6 +233,7 @@ def handle_ocr(crop_coords: str, request: gr.Request) -> tuple[str, str]:
 
 
 _DATE_PREFIX_RE = __import__("re").compile(r"\d{4}-\d{2}-\d{2}[:\s]*")
+_MD_LINK_RE = __import__("re").compile(r"\[([^\]]+)\]\([^)]+\)")
 
 
 def _speech_text_from_markdown(text: str) -> str:
@@ -242,13 +243,17 @@ def _speech_text_from_markdown(text: str) -> str:
         if not stripped:
             lines.append("")
             continue
+        # Never read photo links or the Photos section aloud.
+        if "](" in stripped or "/gradio_api/file=" in stripped:
+            continue
         if stripped.startswith("##"):
             heading = stripped.lstrip("#").strip()
-            if heading:
+            if heading and heading.lower() != "photos":
                 lines.append(f"{heading}.")
             continue
         if stripped.startswith("- "):
             stripped = stripped[2:].strip()
+        stripped = _MD_LINK_RE.sub(r"\1", stripped)
         stripped = _DATE_PREFIX_RE.sub("", stripped)
         stripped = stripped.replace("#", "").strip()
         if stripped:
@@ -263,7 +268,7 @@ def handle_brief(days: int) -> str:
 
 @spaces.GPU(duration=60)
 def handle_brief_read(brief_text: str) -> str:
-    if not brief_text or brief_text.startswith("No log"):
+    if not brief_text or brief_text.startswith("No log") or brief_text.startswith("_Press"):
         return _EMPTY_AUDIO_HTML
     audio_bytes = speak(_speech_text_from_markdown(brief_text))
     return _make_audio_html(audio_bytes)
@@ -364,8 +369,13 @@ body, .gradio-container {
 }
 
 /* ── Tabs — plain text, no boxes, no divider ──
-   Selectors are qualified with .svelte-11gaq1 so they match Gradio's own
-   scoped rules (e.g. .tab-wrapper.svelte-11gaq1) on specificity and win. */
+   The full-width line under the tabs is a border-bottom on .tab-wrapper.
+   Gradio's rule (.tab-wrapper.svelte-11gaq1, 0-2-0) loads AFTER ours, so equal
+   specificity loses on source order. Parent-chain selectors below raise the
+   specificity (0-4-2) to win outright. */
+div.tabs.svelte-11gaq1,
+div.tabs.svelte-11gaq1 > div.tab-wrapper.svelte-11gaq1,
+div.tabs.svelte-11gaq1 div.tab-container.svelte-11gaq1,
 .tab-wrapper.svelte-11gaq1,
 div.tab-container.svelte-11gaq1,
 .tabs.svelte-11gaq1,
@@ -382,7 +392,7 @@ div.tab-container.svelte-11gaq1,
     border-radius: 0 !important;
     padding: 0 !important;
 }
-div.tab-container.svelte-11gaq1[role="tablist"] {
+div.tabs.svelte-11gaq1 > div.tab-wrapper.svelte-11gaq1 > div.tab-container.svelte-11gaq1[role="tablist"] {
     margin-bottom: 14px !important;
     gap: 8px !important;
     justify-content: center !important;
@@ -636,20 +646,19 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 /* Days slider: inset to align with card-contained content above/below */
 .days-slider { padding: 4px 16px 10px !important; margin: 0 0 4px !important; }
 .days-slider .head, .days-slider .wrap { padding: 0 !important; }
-/* Remove the boxes around the number value and the reset arrow */
+/* Show ONLY the bar — hide the number readout box and the reset arrow */
 .days-slider input[type=number],
 .days-slider .number-input,
-.days-slider input[type=number]:focus {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    outline: none !important;
-    text-align: right !important;
-}
 .days-slider button,
 .days-slider .reset-button {
-    background: transparent !important;
+    display: none !important;
+}
+/* Neutralise the (now empty) head container so no leftover box shows */
+.days-slider .head,
+.days-slider .head > div,
+.days-slider .wrap {
     border: none !important;
+    background: transparent !important;
     box-shadow: none !important;
 }
 
@@ -724,6 +733,22 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     overflow-y: auto !important;
     resize: vertical !important;
 }
+/* Brief rendered as Markdown — scrollable card with readable headings + links */
+.brief-box {
+    min-height: 160px !important;
+    max-height: 360px !important;
+    overflow-y: auto !important;
+    padding: 8px 18px !important;
+}
+.brief-box h2 {
+    font-family: 'Tomorrow', monospace !important;
+    color: var(--cyan) !important;
+    font-size: 1rem !important;
+    letter-spacing: 0.5px !important;
+    margin: 1rem 0 0.3rem !important;
+}
+.brief-box p, .brief-box li { color: var(--text) !important; font-size: 1rem !important; line-height: 1.6 !important; }
+.brief-box a { color: var(--cyan) !important; text-decoration: underline !important; }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -1022,10 +1047,8 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 elem_classes=["days-slider"],
             )
             brief_btn = gr.Button("📋  Generate Brief", variant="primary")
-            brief_out = gr.Textbox(
-                label="📄  Doctor brief",
-                lines=8,
-                interactive=False,
+            brief_out = gr.Markdown(
+                value="_Press Generate Brief to build the doctor brief._",
                 elem_classes=["brief-box"],
             )
             with gr.Row(elem_classes=["source-actions"]):

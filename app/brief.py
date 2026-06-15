@@ -132,7 +132,19 @@ def generate_brief(days: int = 30, end: date | None = None) -> str:
             _section("Questions to raise", questions[:8]),
         ]
     )
-    return _compress_brief(raw)
+    brief = _compress_brief(raw)
+
+    # Append a Photos section with clickable links — built directly (not via the
+    # LLM) so the URLs are never mangled by the compression pass.
+    photos = [(d, entry["photo"]) for d, entry in dated_entries if entry.get("photo")]
+    if photos:
+        links = "\n".join(
+            f"- [{d.isoformat()} — view photo](/gradio_api/file={path})"
+            for d, path in photos
+        )
+        brief = f"{brief}\n\n## Photos\n{links}"
+
+    return brief
 
 
 def _compress_brief(raw: str) -> str:
