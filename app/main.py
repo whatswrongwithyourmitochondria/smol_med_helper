@@ -426,6 +426,7 @@ div.tabs.svelte-11gaq1 > div.tab-wrapper.svelte-11gaq1 > div.tab-container.svelt
 /* Keep every tab panel full width so the layout doesn't jump between tabs */
 [role="tabpanel"], .tabitem { width: 100% !important; }
 /* Tab buttons are plain text — no box, no border, no fill. Only the colour changes. */
+[role="tablist"] button,
 button.svelte-11gaq1[role="tab"],
 [role="tab"] {
     font-family: 'Tomorrow', monospace !important;
@@ -450,17 +451,23 @@ button.svelte-11gaq1[role="tab"],
     vertical-align: middle !important;
 }
 /* Nudge emoji glyphs to sit on the same optical baseline as the label text */
+[role="tablist"] button > *,
 [role="tab"] > * { vertical-align: middle !important; }
+[role="tablist"] button:hover:not(.selected),
 [role="tab"]:hover:not(.selected) {
     background: transparent !important;
     color: var(--text) !important;
 }
+[role="tablist"] button:focus,
+[role="tablist"] button:focus-visible,
 [role="tab"]:focus,
 [role="tab"]:focus-visible {
     outline: none !important;
     box-shadow: none !important;
     background: transparent !important;
 }
+[role="tablist"] button.selected,
+[role="tablist"] button[aria-selected="true"],
 [role="tab"].selected,
 [role="tab"][aria-selected="true"] {
     background: transparent !important;
@@ -472,9 +479,13 @@ button.svelte-11gaq1[role="tab"],
     text-shadow: none !important;
 }
 /* Kill tab underlines and full-width separators, including Gradio pseudo-elements. */
+[role="tablist"] button::before,
+[role="tablist"] button::after,
 button.svelte-11gaq1[role="tab"]::before,
 button.svelte-11gaq1[role="tab"]::after,
 [role="tab"]::before, [role="tab"]::after,
+[role="tablist"] button.selected::before, [role="tablist"] button.selected::after,
+[role="tablist"] button[aria-selected="true"]::before, [role="tablist"] button[aria-selected="true"]::after,
 [role="tab"].selected::before, [role="tab"].selected::after,
 [role="tab"][aria-selected="true"]::before, [role="tab"][aria-selected="true"]::after {
     background-color: transparent !important;
@@ -622,6 +633,7 @@ button.primary:active {
         height: auto !important;
         overflow: visible !important;
     }
+    [role="tablist"] button,
     button.svelte-11gaq1[role="tab"],
     [role="tab"] {
         flex: 1 1 calc(50% - 8px) !important;
@@ -860,9 +872,14 @@ CUSTOM_HEAD = """
         '.tab-container::before,.tab-container::after,[class*="tab-wrapper"]::before,',
         '[class*="tab-wrapper"]::after,[class*="tab-container"]::before,',
         '[class*="tab-container"]::after,[role="tablist"]::before,[role="tablist"]::after,',
-        '.tab-nav::before,.tab-nav::after,[role="tab"]::before,[role="tab"]::after{',
+        '.tab-nav::before,.tab-nav::after,[role="tablist"] button::before,',
+        '[role="tablist"] button::after,[role="tab"]::before,[role="tab"]::after{',
         'display:none!important;content:none!important;',
-        'height:0!important;border:0!important;box-shadow:none!important;background:transparent!important;}'
+        'height:0!important;border:0!important;box-shadow:none!important;background:transparent!important;}',
+        '[role="tablist"] button.selected,[role="tablist"] button[aria-selected="true"],',
+        '[role="tab"].selected,[role="tab"][aria-selected="true"]{',
+        'color:#f97316!important;background:transparent!important;border:0!important;',
+        'border-bottom:0!important;box-shadow:none!important;text-shadow:none!important;}'
     ].join('');
     var SEL = '.tabs, .tab-wrapper, .tab-container, [class*="tab-wrapper"], [class*="tab-container"], [role="tablist"], [role="tab"], .tab-nav';
     function installTabStyle() {
