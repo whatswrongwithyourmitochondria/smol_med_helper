@@ -426,7 +426,6 @@ div.tabs.svelte-11gaq1 > div.tab-wrapper.svelte-11gaq1 > div.tab-container.svelt
 /* Keep every tab panel full width so the layout doesn't jump between tabs */
 [role="tabpanel"], .tabitem { width: 100% !important; }
 /* Tab buttons are plain text — no box, no border, no fill. Only the colour changes. */
-.tabs button,
 button.svelte-11gaq1[role="tab"],
 [role="tab"] {
     font-family: 'Tomorrow', monospace !important;
@@ -451,23 +450,17 @@ button.svelte-11gaq1[role="tab"],
     vertical-align: middle !important;
 }
 /* Nudge emoji glyphs to sit on the same optical baseline as the label text */
-.tabs button > *,
 [role="tab"] > * { vertical-align: middle !important; }
-.tabs button:hover:not(.selected),
 [role="tab"]:hover:not(.selected) {
     background: transparent !important;
     color: var(--text) !important;
 }
-.tabs button:focus,
-.tabs button:focus-visible,
 [role="tab"]:focus,
 [role="tab"]:focus-visible {
     outline: none !important;
     box-shadow: none !important;
     background: transparent !important;
 }
-.tabs button.selected,
-.tabs button[aria-selected="true"],
 [role="tab"].selected,
 [role="tab"][aria-selected="true"] {
     background: transparent !important;
@@ -479,12 +472,9 @@ button.svelte-11gaq1[role="tab"],
     text-shadow: none !important;
 }
 /* Kill tab underlines and full-width separators, including Gradio pseudo-elements. */
-.tabs button::before, .tabs button::after,
 button.svelte-11gaq1[role="tab"]::before,
 button.svelte-11gaq1[role="tab"]::after,
 [role="tab"]::before, [role="tab"]::after,
-.tabs button.selected::before, .tabs button.selected::after,
-.tabs button[aria-selected="true"]::before, .tabs button[aria-selected="true"]::after,
 [role="tab"].selected::before, [role="tab"].selected::after,
 [role="tab"][aria-selected="true"]::before, [role="tab"][aria-selected="true"]::after {
     background-color: transparent !important;
@@ -623,7 +613,6 @@ button.primary:active {
         height: auto !important;
         overflow: visible !important;
     }
-    .tabs button,
     button.svelte-11gaq1[role="tab"],
     [role="tab"] {
         flex: 1 1 calc(50% - 8px) !important;
@@ -751,6 +740,14 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 
 /* ── Audio ── */
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
+#checkin-audio {
+    overflow: hidden !important;
+}
+#checkin-audio select,
+#checkin-audio [role="combobox"],
+#checkin-audio [aria-haspopup="listbox"] {
+    display: none !important;
+}
 /* Keep the playback control icons (volume / speed / reset / trim) as plain
    transparent icon buttons — no bordered boxes. */
 #checkin-audio .controls button,
@@ -761,6 +758,11 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     border: none !important;
     box-shadow: none !important;
     min-height: 0 !important;
+    min-width: 0 !important;
+    padding: 0.35rem !important;
+    font-size: 0.95rem !important;
+    letter-spacing: 0 !important;
+    line-height: 1.2 !important;
 }
 
 /* ── History placeholder / entries — align text inside its box ── */
@@ -849,8 +851,8 @@ CUSTOM_HEAD = """
         '.tab-container::before,.tab-container::after,[class*="tab-wrapper"]::before,',
         '[class*="tab-wrapper"]::after,[class*="tab-container"]::before,',
         '[class*="tab-container"]::after,[role="tablist"]::before,[role="tablist"]::after,',
-        '.tab-nav::before,.tab-nav::after,[role="tab"]::before,[role="tab"]::after,',
-        '.tabs button::before,.tabs button::after{display:none!important;content:none!important;',
+        '.tab-nav::before,.tab-nav::after,[role="tab"]::before,[role="tab"]::after{',
+        'display:none!important;content:none!important;',
         'height:0!important;border:0!important;box-shadow:none!important;background:transparent!important;}'
     ].join('');
     var SEL = '.tabs, .tab-wrapper, .tab-container, [class*="tab-wrapper"], [class*="tab-container"], [role="tablist"], [role="tab"], .tab-nav';
