@@ -302,8 +302,8 @@ body, .gradio-container {
 /* ── Hero header ── */
 .app-header {
     text-align: center;
-    padding: 2rem 1rem 1.2rem;
-    margin-bottom: 1.2rem;
+    padding: 2rem 1rem 1.5rem;
+    margin-bottom: 2.5rem;
 }
 .app-title {
     font-family: 'Fredoka', sans-serif;
@@ -330,6 +330,14 @@ body, .gradio-container {
 }
 
 /* ── Tabs — chunky chips ── */
+/* Remove the horizontal separator line under the tab buttons */
+.tabs, [role="tablist"], div.tab-container,
+.tab-nav, .tab-wrap, .tabs > div:not([role="tabpanel"]) {
+    border-bottom: none !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
 div.tab-container {
     background: transparent !important;
     border: none !important;
@@ -428,23 +436,42 @@ button.secondary:active {
     box-shadow: none !important;
     padding: 0 !important;
 }
-.source-actions .source-button button,
-.source-actions button {
-    width: 100% !important;
-    min-height: 52px !important;
-    min-width: 0 !important;
-    border-radius: 14px !important;
-}
 .source-actions .clear-photo-button { flex: 0 0 80px !important; max-width: 80px !important; }
+/* Strip Gradio card wrapper styling inside source-button — but NOT the button/label itself */
 .source-actions .upload-button,
 .source-actions .file-preview,
 .source-actions .wrap,
-.source-actions .form,
-.source-actions .block {
+.source-actions .form {
     background: transparent !important;
     border: 0 !important;
     box-shadow: none !important;
     padding: 0 !important;
+}
+/* Camera / check-in action buttons — explicit Festa cream card style */
+.source-actions .source-button button,
+.source-actions .source-button label {
+    background: var(--cream) !important;
+    border: 3px solid var(--ink) !important;
+    border-radius: 14px !important;
+    box-shadow: 3px 4px 0 var(--ink) !important;
+    color: var(--ink) !important;
+    min-height: 52px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    font-family: 'Fredoka', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+    transition: transform 0.13s ease, box-shadow 0.13s ease !important;
+}
+.source-actions .source-button button:hover,
+.source-actions .source-button label:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 3px 6px 0 var(--ink) !important;
 }
 
 /* ── Text inputs ── */
@@ -501,9 +528,8 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
 ::-webkit-scrollbar-track { background: var(--cream); }
 ::-webkit-scrollbar-thumb { background: var(--mut); border-radius: 4px; }
 
-/* ── Red photo-attach button — style the outer wrapper directly so source-actions
-   stripping of inner .block/.wrap/.form can't override the visible colour ── */
-.photo-attach-btn {
+/* ── Red photo-attach button — ID selector (1-0-0) beats all class rules ── */
+#checkin-photo-btn {
     background: var(--red) !important;
     border: 3px solid var(--ink) !important;
     box-shadow: 3px 4px 0 var(--ink) !important;
@@ -513,21 +539,19 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
     transition: transform 0.13s ease, box-shadow 0.13s ease !important;
     flex: 1 1 0 !important;
 }
-.photo-attach-btn:hover { transform: translateY(-2px) !important; box-shadow: 3px 6px 0 var(--ink) !important; }
-.photo-attach-btn:active { transform: translateY(1px) !important; box-shadow: 1px 2px 0 var(--ink) !important; }
-/* strip inner containers so the wrapper red shows through */
-.photo-attach-btn > *,
-.photo-attach-btn .block,
-.photo-attach-btn .wrap,
-.photo-attach-btn .form {
+#checkin-photo-btn:hover { transform: translateY(-2px) !important; box-shadow: 3px 6px 0 var(--ink) !important; }
+#checkin-photo-btn > *,
+#checkin-photo-btn .block,
+#checkin-photo-btn .wrap,
+#checkin-photo-btn .form {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     padding: 0 !important;
     height: 100% !important;
 }
-.photo-attach-btn label,
-.photo-attach-btn button {
+#checkin-photo-btn label,
+#checkin-photo-btn button {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -545,13 +569,38 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
     gap: 8px !important;
 }
 
-/* ── Green Log Check-in button — higher specificity than button.primary ── */
-.checkin-log-btn button.primary {
+/* ── Green Log Check-in button — ID selector ── */
+#checkin-log-btn button {
     background: #27AE60 !important;
+    color: #fff !important;
+    border: 3px solid var(--ink) !important;
     box-shadow: 5px 6px 0 var(--ink) !important;
+    border-radius: 44px !important;
+    min-height: 56px !important;
+    font-family: 'Fredoka', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
 }
-.checkin-log-btn button.primary:hover { background: #219150 !important; box-shadow: 5px 9px 0 var(--ink) !important; }
-.checkin-log-btn button.primary:active { background: #1a7a42 !important; box-shadow: 2px 3px 0 var(--ink) !important; }
+#checkin-log-btn button:hover { background: #219150 !important; box-shadow: 5px 9px 0 var(--ink) !important; }
+#checkin-log-btn button:active { background: #1a7a42 !important; box-shadow: 2px 3px 0 var(--ink) !important; }
+
+/* ── Record button in audio widget — blue ── */
+#checkin-audio button,
+#checkin-audio .waveform-container button {
+    background: var(--blue) !important;
+    color: #fff !important;
+    border: 3px solid var(--ink) !important;
+    border-radius: 44px !important;
+    box-shadow: 4px 4px 0 var(--ink) !important;
+    font-family: 'Fredoka', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+}
+#checkin-audio button:hover,
+#checkin-audio .waveform-container button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 4px 6px 0 var(--ink) !important;
+}
 
 /* ── Consistent tab panel width ── */
 .tabitem, .tab-content { width: 100% !important; }
@@ -748,6 +797,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 sources=["microphone"],
                 type="filepath",
                 label="🎙️  Your voice",
+                elem_id="checkin-audio",
             )
             with gr.Row(elem_classes=["source-actions"]):
                 checkin_photo_btn = gr.UploadButton(
@@ -755,7 +805,8 @@ with gr.Blocks(title="Patient Scribe") as demo:
                     file_types=["image"],
                     type="filepath",
                     variant="secondary",
-                    elem_classes=["source-button", "photo-attach-btn"],
+                    elem_id="checkin-photo-btn",
+                    elem_classes=["source-button"],
                 )
                 checkin_photo_clear_btn = gr.Button(
                     "🗑️",
@@ -773,7 +824,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 lambda: (None, gr.update(visible=False)),
                 outputs=[checkin_photo_state, checkin_photo_clear_btn],
             )
-            checkin_btn = gr.Button("Log Check-in", variant="primary", elem_classes=["checkin-log-btn"])
+            checkin_btn = gr.Button("Log Check-in", variant="primary", elem_id="checkin-log-btn")
             transcript_out = gr.Textbox(
                 label="📝  What I heard",
                 lines=4,
@@ -791,7 +842,8 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
                 'Point the camera at a <strong style="color:#2F6FE0;">medicine box</strong>, '
-                'device screen, or letter.</p>'
+                '<strong style="color:#2F6FE0;">device screen</strong>, or '
+                '<strong style="color:#2F6FE0;">letter</strong>.</p>'
                 '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
@@ -800,6 +852,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 take_photo_btn = gr.Button(
                     "📷  Take a photo",
                     variant="secondary",
+                    elem_id="take-photo-btn",
                     elem_classes=["source-button"],
                 )
                 import_photo_btn = gr.UploadButton(
@@ -807,6 +860,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                     file_types=["image"],
                     type="filepath",
                     variant="secondary",
+                    elem_id="import-photo-btn",
                     elem_classes=["source-button"],
                 )
                 clear_photo_btn = gr.Button(
