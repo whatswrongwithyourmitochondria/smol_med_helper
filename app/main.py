@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 import traceback
+from datetime import datetime
+from pathlib import Path
 
 os.environ.setdefault("GRADIO_SSR_MODE", "False")
 
@@ -26,13 +29,30 @@ from app.tts import speak
 # ── Session state (server-side, keyed by Gradio session hash) ─────────────────
 _session_photos: dict[str, str] = {}  # session_hash → full-res temp file path
 
+# Persistent photo store — Gradio's upload temp files are deleted, so we copy
+# attached photos here and keep a stable relative path in the log.
+PHOTO_DIR = Path(__file__).parent.parent / "data" / "photos"
+PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+
 # ── Handlers ──────────────────────────────────────────────────────────────────
+
+def _persist_photo(src_path: str | None) -> str | None:
+    """Copy an uploaded photo into data/photos/ and return its relative path."""
+    if not src_path or not os.path.exists(src_path):
+        return None
+    ext = os.path.splitext(src_path)[1] or ".jpg"
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    dest = PHOTO_DIR / f"checkin-{stamp}{ext}"
+    shutil.copyfile(src_path, dest)
+    return str(dest.relative_to(PHOTO_DIR.parent.parent))
+
 
 def handle_checkin(audio_path: str | None, photo_path: str | None) -> tuple[str, None, object]:
     if not audio_path:
         return "", photo_path, gr.update()
     transcript = transcribe(audio_path)
-    log_module.add_entry(transcript, entry_type="checkin", photo=photo_path or None)
+    saved_photo = _persist_photo(photo_path)
+    log_module.add_entry(transcript, entry_type="checkin", photo=saved_photo)
     return transcript, None, gr.update(visible=False)
 
 
@@ -259,7 +279,10 @@ def handle_history() -> str:
         lines.append(f"### {d.isoformat()}")
         for e in log_module.get_entries(d):
             icon = type_icon.get(e["type"], "•")
-            lines.append(f"{icon}&nbsp; {e['content']}")
+            line = f"{icon}&nbsp; {e['content']}"
+            if e.get("photo"):
+                line += f' &nbsp; [📎 view photo](/gradio_api/file={e["photo"]})'
+            lines.append(line)
         lines.append("")
     return "\n".join(lines)
 
@@ -351,17 +374,22 @@ div.tab-container {
     gap: 8px !important;
     justify-content: center !important;
 }
-/* Remove Gradio's default full-width separator line around the tab strip.
-   The rounded pill box is div.tab-container — preserved by its higher specificity. */
+/* Remove every box / line / fill that Gradio draws around the tab strip,
+   on every wrapper level. Individual tab chips (button.svelte-11gaq1) keep
+   their own border, set separately below. */
 .tabs, div.tabs,
+.tabs > div, .tab-wrapper, div.tab-container,
 .tab-nav, [role="tablist"],
 [role="tabpanel"], .tabitem {
+    background: transparent !important;
     border: none !important;
     box-shadow: none !important;
     outline: none !important;
 }
 .tabs::before, .tabs::after,
-.tab-nav::before, .tab-nav::after { display: none !important; }
+.tabs > div::before, .tabs > div::after,
+.tab-wrapper::before, .tab-wrapper::after,
+.tab-nav::before, .tab-nav::after { display: none !important; content: none !important; }
 /* Keep every tab panel full width so the layout doesn't jump between tabs */
 [role="tabpanel"], .tabitem { width: 100% !important; }
 button.svelte-11gaq1 {
@@ -651,6 +679,30 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 /* ── Audio ── */
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
 
+/* ── Big Record button in the check-in mic widget ── */
+#checkin-audio .record-button,
+#checkin-audio button.record,
+#checkin-audio .controls button:first-child,
+#checkin-audio .record {
+    min-height: 60px !important;
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    padding: 0 30px !important;
+    border-radius: 14px !important;
+    background: var(--surface2) !important;
+    border: 1px solid var(--cyan) !important;
+    color: var(--text) !important;
+}
+#checkin-audio .record-button:hover,
+#checkin-audio button.record:hover,
+#checkin-audio .controls button:first-child:hover {
+    box-shadow: 0 0 16px rgba(0,210,255,0.18) !important;
+}
+
+/* ── History placeholder / entries — align text inside its box ── */
+.history-box { padding: 4px 18px !important; }
+.history-box p, .history-box li { text-align: left !important; }
+
 /* ── Doctor Brief — compact scrollable box ── */
 .brief-box textarea {
     min-height: 180px !important;
@@ -824,6 +876,8 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 sources=["microphone"],
                 type="filepath",
                 label="🎙️  Your voice",
+                show_label=False,
+                elem_id="checkin-audio",
             )
             with gr.Row(elem_classes=["source-actions"]):
                 checkin_photo_btn = gr.UploadButton(
@@ -960,9 +1014,11 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 interactive=False,
                 elem_classes=["brief-box"],
             )
-            read_brief_btn = gr.Button(
-                "🔊  Read Aloud", variant="secondary", elem_classes=["read-aloud-btn"],
-            )
+            with gr.Row(elem_classes=["source-actions"]):
+                read_brief_btn = gr.Button(
+                    "🔊  Read Aloud", variant="secondary",
+                    elem_classes=["source-button", "read-aloud-btn"],
+                )
             brief_audio_out = gr.HTML(value=_EMPTY_AUDIO_HTML, elem_classes=["audio-bare"])
             brief_btn.click(
                 handle_brief,
@@ -982,9 +1038,12 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 'line-height:1.65;margin:0 0 1rem 0;">Last 7 days of log entries.</p>'
             )
             refresh_btn = gr.Button("🔄  Refresh", variant="secondary")
-            history_out = gr.Markdown(value="_Press Refresh to load entries._")
+            history_out = gr.Markdown(
+                value="_Press Refresh to load entries._",
+                elem_classes=["history-box"],
+            )
             refresh_btn.click(handle_history, outputs=history_out)
 
 
 if __name__ == "__main__":
-    demo.launch(css=CSS, theme=THEME, head=CUSTOM_HEAD)
+    demo.launch(css=CSS, theme=THEME, head=CUSTOM_HEAD, allowed_paths=["data"])

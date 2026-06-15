@@ -11,6 +11,7 @@ _COMPRESS_SYSTEM = """Condense this health log brief for a doctor's appointment.
 Keep EXACTLY these six section headers: ## New, ## Changed, ## Resolved, ## Ongoing, ## Readings, ## Questions to raise
 - At most 2 compact bullet points per section
 - Merge repeated mentions; keep all dates and numbers
+- Keep any "(see image)" marker exactly where it appears — never drop it
 - Plain spoken English — this will be read aloud to the patient
 - If a section has nothing, write exactly: Nothing to report.
 - NEVER diagnose conditions or advise on medications"""
