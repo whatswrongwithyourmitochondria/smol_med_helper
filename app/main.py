@@ -501,15 +501,39 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
 ::-webkit-scrollbar-track { background: var(--cream); }
 ::-webkit-scrollbar-thumb { background: var(--mut); border-radius: 4px; }
 
-/* ── Falling hearts ── */
+/* ── Blue photo-attach button ── */
+.photo-attach-btn button {
+    background: var(--blue) !important;
+    color: #fff !important;
+    border: 3px solid var(--ink) !important;
+    box-shadow: 3px 4px 0 var(--ink) !important;
+    border-radius: 14px !important;
+    min-height: 52px !important;
+    width: 100% !important;
+    font-family: 'Fredoka', sans-serif !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+    cursor: pointer !important;
+    transition: transform 0.13s ease, box-shadow 0.13s ease !important;
+}
+.photo-attach-btn button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 3px 6px 0 var(--ink) !important;
+}
+.photo-attach-btn button:active {
+    transform: translateY(1px) !important;
+    box-shadow: 1px 2px 0 var(--ink) !important;
+}
+
+/* ── Falling hearts — behind all content ── */
 @keyframes fall {
-    0%   { transform: translateY(-40px) rotate(0deg);   opacity: 0; }
-    10%  { opacity: .45; }
-    90%  { opacity: .45; }
+    0%   { transform: translateY(-60px) rotate(0deg);   opacity: 0; }
+    10%  { opacity: .5; }
+    90%  { opacity: .5; }
     100% { transform: translateY(110vh) rotate(220deg); opacity: 0; }
 }
 .heart-fall {
-    position: fixed; pointer-events: none; z-index: 0; user-select: none;
+    position: fixed; pointer-events: none; z-index: -1; user-select: none;
     animation: fall linear infinite;
 }
 
@@ -533,7 +557,7 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
 
 HEADER_HTML = """
 <div class="app-header">
-    <h1 class="app-title">Health <span style="color:#2F6FE0">Companion</span></h1>
+    <h1 class="app-title">Patient <span style="color:#2F6FE0">Scribe</span></h1>
     <p class="app-sub">voice-first &nbsp;·&nbsp; camera &nbsp;·&nbsp; appointment-ready</p>
 </div>
 """
@@ -553,7 +577,7 @@ CUSTOM_HEAD = """
             h.textContent = glyphs[i % glyphs.length];
             h.style.left = (Math.random() * 94) + '%';
             h.style.top = '-40px';
-            h.style.fontSize = (13 + Math.random() * 14) + 'px';
+            h.style.fontSize = (30 + Math.random() * 26) + 'px';
             h.style.animationDuration = (7 + Math.random() * 7) + 's';
             h.style.animationDelay = (-Math.random() * 10) + 's';
             document.body.appendChild(h);
@@ -671,7 +695,7 @@ THEME = gr.themes.Base(
     font_mono=gr.themes.GoogleFont("Fredoka"),
 )
 
-with gr.Blocks(title="Health Companion") as demo:
+with gr.Blocks(title="Patient Scribe") as demo:
 
     gr.HTML(HEADER_HTML)
 
@@ -699,7 +723,7 @@ with gr.Blocks(title="Health Companion") as demo:
                     file_types=["image"],
                     type="filepath",
                     variant="secondary",
-                    elem_classes=["source-button"],
+                    elem_classes=["source-button", "photo-attach-btn"],
                 )
                 checkin_photo_clear_btn = gr.Button(
                     "🗑️",
