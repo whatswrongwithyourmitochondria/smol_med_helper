@@ -780,22 +780,28 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 #checkin-audio .audio-container:has(.record-button),
 #checkin-audio .audio-container:has(button[aria-label*="Record"]),
 #checkin-audio .audio-container:has(button[title*="Record"]),
+#checkin-audio.smc-record-idle .audio-container,
 #checkin-audio .recording-container:has(.record-button),
 #checkin-audio .recording-container:has(button[aria-label*="Record"]),
-#checkin-audio .recording-container:has(button[title*="Record"]) {
+#checkin-audio .recording-container:has(button[title*="Record"]),
+#checkin-audio.smc-record-idle .recording-container {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
 }
 #checkin-audio .audio-container:has(.record-button),
 #checkin-audio .audio-container:has(button[aria-label*="Record"]),
-#checkin-audio .audio-container:has(button[title*="Record"]) {
+#checkin-audio .audio-container:has(button[title*="Record"]),
+#checkin-audio.smc-record-idle .audio-container {
     min-height: 112px !important;
 }
 #checkin-audio .record-button,
+#checkin-audio .smc-record-button,
 #checkin-audio button[aria-label*="Record"],
 #checkin-audio button[title*="Record"] {
     margin: 0 auto !important;
+    align-self: center !important;
+    justify-self: center !important;
 }
 /* Keep the playback control icons (volume / speed / reset / trim) as plain
    transparent icon buttons — no bordered boxes. */
@@ -951,6 +957,28 @@ CUSTOM_HEAD = """
         childList: true, subtree: true
     });
     [50, 200, 600, 1500].forEach(function (t) { setTimeout(killDivider, t); });
+}());
+
+// Center the idle Check-in "Record" control without affecting playback controls
+// after a recording exists. Gradio's generated classes change, so mark by text.
+(function () {
+    function markCheckinRecord() {
+        var root = document.getElementById('checkin-audio');
+        if (!root) return;
+        var recordButton = null;
+        root.querySelectorAll('button').forEach(function (button) {
+            var text = (button.textContent || '').replace(/\\s+/g, ' ').trim();
+            var isRecord = text === 'Record' || text.endsWith(' Record');
+            button.classList.toggle('smc-record-button', isRecord);
+            if (isRecord) recordButton = button;
+        });
+        root.classList.toggle('smc-record-idle', !!recordButton);
+    }
+    markCheckinRecord();
+    new MutationObserver(markCheckinRecord).observe(document.documentElement, {
+        childList: true, subtree: true, characterData: true
+    });
+    [50, 200, 600, 1500].forEach(function (t) { setTimeout(markCheckinRecord, t); });
 }());
 
 // ── Autoplay for audio injected via gr.HTML ─────────────────────────────────
