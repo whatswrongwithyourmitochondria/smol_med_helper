@@ -733,11 +733,16 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     overflow-y: auto !important;
     resize: vertical !important;
 }
-/* Brief rendered as Markdown — scrollable card with readable headings + links */
+/* Brief rendered as Markdown — expands fully, no inner scrollbars (page scrolls) */
+.brief-box,
+.brief-box > *,
+.brief-box .prose,
+.brief-box .md {
+    max-height: none !important;
+    overflow: visible !important;
+}
 .brief-box {
     min-height: 160px !important;
-    max-height: 360px !important;
-    overflow-y: auto !important;
     padding: 8px 18px !important;
 }
 .brief-box h2 {
