@@ -808,22 +808,26 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     min-width: max-content !important;
     z-index: 2 !important;
 }
-#checkin-audio.smc-recording .smc-stop-button {
-    margin: 0 auto !important;
+#checkin-audio.smc-recording .audio-container,
+#checkin-audio.smc-recording .recording-container {
+    gap: 30px !important;
+}
+#checkin-audio.smc-recording .smc-stop-button,
+#checkin-audio.smc-recording .smc-pause-button {
+    position: static !important;
+    margin: 0 !important;
     align-self: center !important;
     justify-self: center !important;
+    width: auto !important;
+    min-width: max-content !important;
+    z-index: 2 !important;
 }
 #checkin-audio.smc-record-idle .smc-record-noise,
 #checkin-audio.smc-recording .smc-record-noise {
     display: none !important;
 }
-#checkin-audio .settings-wrapper button[aria-label="Reset audio"],
-#checkin-audio .settings-wrapper button[aria-label*="Reset"],
-#checkin-audio .settings-wrapper button[aria-label*="Remove"],
-#checkin-audio .settings-wrapper button[aria-label*="Delete"],
-#checkin-audio .settings-wrapper button[title*="Reset"],
-#checkin-audio .settings-wrapper button[title*="Remove"],
-#checkin-audio .settings-wrapper button[title*="Delete"] {
+#checkin-audio .settings-wrapper button[aria-label*="Trim"],
+#checkin-audio .settings-wrapper button[title*="Trim"] {
     display: none !important;
 }
 #checkin-audio .controls[data-testid="waveform-controls"],
@@ -850,7 +854,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 #checkin-audio .settings-wrapper {
     justify-self: end !important;
 }
-/* Keep the playback control icons (volume / speed / reset / trim) as plain
+/* Keep the playback control icons (volume / speed / reset / trash) as plain
    transparent icon buttons — no bordered boxes. */
 #checkin-audio .controls button,
 #checkin-audio .control-wrapper button,
@@ -1031,34 +1035,63 @@ CUSTOM_HEAD = """
     function markCheckinRecord() {
         var root = document.getElementById('checkin-audio');
         if (!root) return;
-        var recordButton = null;
-        var stopButton = null;
+        var recordButtons = [];
+        var stopButtons = [];
+        var pauseButtons = [];
         var hasPlayback = !!root.querySelector('[data-testid="waveform-controls"], .play-pause-wrapper');
-        root.querySelectorAll('button').forEach(function (button) {
+        var buttons = Array.from(root.querySelectorAll('button'));
+        buttons.forEach(function (button) {
+            button.classList.remove(
+                'smc-record-button',
+                'smc-stop-button',
+                'smc-pause-button',
+                'smc-record-noise',
+                'smc-reset-button'
+            );
             var text = [
                 button.textContent || '',
                 button.getAttribute('aria-label') || '',
                 button.getAttribute('title') || ''
             ].join(' ').replace(/\\s+/g, ' ').trim();
-            var isRecord = text === 'Record' || text.endsWith(' Record');
-            var isStop = text === 'Stop' || text.indexOf(' Stop') >= 0 || text.indexOf('Stop recording') >= 0;
-            var isReset = text.indexOf('Reset audio') >= 0 || text.indexOf('Remove') >= 0 || text.indexOf('Delete') >= 0;
-            button.classList.toggle('smc-record-button', isRecord);
-            button.classList.toggle('smc-stop-button', isStop);
+            var lower = text.toLowerCase();
+            var isVisible = button.offsetParent !== null;
+            var isRecord = /(^|\\s)record(\\s|$)/i.test(text);
+            var isPause = /(^|\\s)pause(\\s|$)/i.test(text) || lower.indexOf('pause recording') >= 0;
+            var isResume = /(^|\\s)resume(\\s|$)/i.test(text) || lower.indexOf('resume recording') >= 0;
+            var isStop = /(^|\\s)stop(\\s|$)/i.test(text) || lower.indexOf('stop recording') >= 0;
+            var isReset = lower.indexOf('reset audio') >= 0
+                || lower.indexOf('remove') >= 0
+                || lower.indexOf('delete') >= 0;
             button.classList.toggle('smc-reset-button', isReset);
-            button.classList.remove('smc-record-noise');
-            if (isRecord && button.offsetParent !== null) recordButton = button;
-            if (isStop && button.offsetParent !== null) stopButton = button;
+            if (!isVisible) return;
+            if (isRecord) recordButtons.push(button);
+            if (isPause || isResume) pauseButtons.push(button);
+            if (isStop && !isPause && !isResume) stopButtons.push(button);
         });
-        var isRecording = !!stopButton && !hasPlayback;
-        var isIdle = !!recordButton && !isRecording && !hasPlayback;
+
+        var primaryRecord = recordButtons[0] || null;
+        var primaryStop = stopButtons[0] || null;
+        var primaryPause = pauseButtons[0] || null;
+        if (!primaryPause && stopButtons.length > 1) {
+            primaryPause = stopButtons[1];
+            if ((primaryPause.textContent || '').trim().toLowerCase() === 'stop') {
+                primaryPause.textContent = 'Pause';
+                primaryPause.setAttribute('aria-label', 'Pause recording');
+            }
+        }
+        if (primaryRecord) primaryRecord.classList.add('smc-record-button');
+        if (primaryStop) primaryStop.classList.add('smc-stop-button');
+        if (primaryPause) primaryPause.classList.add('smc-pause-button');
+
+        var isRecording = !!primaryStop && !hasPlayback;
+        var isIdle = !!primaryRecord && !isRecording && !hasPlayback;
         root.classList.toggle('smc-record-idle', isIdle);
         root.classList.toggle('smc-recording', isRecording);
         if (isIdle || isRecording) {
-            root.querySelectorAll('button').forEach(function (button) {
+            buttons.forEach(function (button) {
                 var keep = isIdle
                     ? button.classList.contains('smc-record-button')
-                    : button.classList.contains('smc-stop-button');
+                    : button.classList.contains('smc-stop-button') || button.classList.contains('smc-pause-button');
                 button.classList.toggle('smc-record-noise', !keep);
             });
         }
