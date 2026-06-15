@@ -350,16 +350,19 @@ div.tab-container {
     gap: 4px !important;
     justify-content: center !important;
 }
-/* Remove Gradio's default separator line below the tab strip */
-.tabs > div:not([role="tabpanel"]),
-[role="tablist"],
-.tab-nav {
-    border-bottom: none !important;
+/* Remove Gradio's default full-width separator line around the tab strip.
+   The rounded pill box is div.tab-container — preserved by its higher specificity. */
+.tabs, div.tabs,
+.tab-nav, [role="tablist"],
+[role="tabpanel"], .tabitem {
+    border: none !important;
+    box-shadow: none !important;
     outline: none !important;
 }
-.tabitem, [role="tabpanel"] {
-    border-top: none !important;
-}
+.tabs::before, .tabs::after,
+.tab-nav::before, .tab-nav::after { display: none !important; }
+/* Keep every tab panel full width so the layout doesn't jump between tabs */
+[role="tabpanel"], .tabitem { width: 100% !important; }
 button.svelte-11gaq1 {
     font-family: 'Tomorrow', monospace !important;
     font-size: 0.8rem !important;
@@ -594,6 +597,16 @@ label > span, .label-wrap > span {
 
 /* ── Slider ── */
 input[type=range] { accent-color: var(--cyan) !important; height: 6px !important; }
+/* Days slider: inset to align with card-contained content above/below;
+   keep label + number box and the track on the same horizontal bounds */
+.days-slider { padding: 4px 16px 10px !important; margin: 0 0 4px !important; }
+.days-slider .head, .days-slider .wrap { padding: 0 !important; }
+
+/* ── Read Aloud — match the "Attach photo" secondary-button proportions ── */
+.read-aloud-btn button {
+    min-height: 58px !important;
+    border-radius: 14px !important;
+}
 
 /* ── Audio ── */
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
@@ -892,12 +905,13 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'New &nbsp;·&nbsp; Changed &nbsp;·&nbsp; Resolved &nbsp;·&nbsp; '
-                'Ongoing &nbsp;·&nbsp; Readings &nbsp;·&nbsp; Questions to raise.</p>'
+                'Ongoing &nbsp;·&nbsp; Readings &nbsp;·&nbsp; Questions</p>'
             )
             days_slider = gr.Slider(
                 7, 90, value=30, step=1,
                 label="📅  Days to include",
                 container=False,
+                elem_classes=["days-slider"],
             )
             brief_btn = gr.Button("📋  Generate Brief", variant="primary")
             brief_out = gr.Textbox(
@@ -906,7 +920,9 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 interactive=False,
                 elem_classes=["brief-box"],
             )
-            read_brief_btn = gr.Button("🔊  Read Aloud", variant="secondary")
+            read_brief_btn = gr.Button(
+                "🔊  Read Aloud", variant="secondary", elem_classes=["read-aloud-btn"],
+            )
             brief_audio_out = gr.HTML(value=_EMPTY_AUDIO_HTML)
             brief_btn.click(
                 handle_brief,
