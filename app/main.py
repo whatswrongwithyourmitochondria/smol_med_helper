@@ -841,6 +841,21 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 #checkin-audio .settings-wrapper button[title*="Trim"] {
     display: none !important;
 }
+/* Turn Gradio's "Reset audio" (undo) control into a Delete/trash button.
+   The JS below marks it .smc-trash, relabels it, and wires its click to the
+   native Clear action so it actually removes the recording. */
+#checkin-audio button.smc-trash svg {
+    display: none !important;
+}
+#checkin-audio button.smc-trash::before {
+    content: "";
+    display: inline-block;
+    width: 1.45rem;
+    height: 1.45rem;
+    background-color: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'/%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/%3E%3Cline x1='10' y1='11' x2='10' y2='17'/%3E%3Cline x1='14' y1='11' x2='14' y2='17'/%3E%3C/svg%3E") no-repeat center / contain;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 5 6 21 6'/%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/%3E%3Cline x1='10' y1='11' x2='10' y2='17'/%3E%3Cline x1='14' y1='11' x2='14' y2='17'/%3E%3C/svg%3E") no-repeat center / contain;
+}
 #checkin-audio .controls[data-testid="waveform-controls"] {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
@@ -1121,6 +1136,36 @@ CUSTOM_HEAD = """
         childList: true, subtree: true, characterData: true
     });
     [50, 200, 600, 1500].forEach(function (t) { setTimeout(markCheckinRecord, t); });
+}());
+
+// Repurpose the playback "Reset audio" (undo) control as a Delete/trash button
+// that actually removes the recording via Gradio's native Clear action.
+(function () {
+    function markTrash() {
+        var root = document.getElementById('checkin-audio');
+        if (!root) return;
+        var reset = root.querySelector('button[aria-label="Reset audio"]');
+        if (reset && !reset.classList.contains('smc-trash')) {
+            reset.classList.add('smc-trash');
+            reset.setAttribute('aria-label', 'Delete recording');
+            reset.setAttribute('title', 'Delete recording');
+        }
+    }
+    markTrash();
+    new MutationObserver(markTrash).observe(document.documentElement, {
+        childList: true, subtree: true
+    });
+    // Capture-phase so Gradio's own reset handler never fires — we only clear.
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest
+            ? e.target.closest('#checkin-audio button.smc-trash')
+            : null;
+        if (!btn) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        var clear = document.querySelector('#checkin-audio button[aria-label="Clear"]');
+        if (clear) clear.click();
+    }, true);
 }());
 
 // ── Autoplay for audio injected via gr.HTML ─────────────────────────────────
