@@ -766,6 +766,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
 #checkin-audio {
     overflow: hidden !important;
+    position: relative !important;
 }
 #checkin-audio .top-panel,
 #checkin-audio .icon-button-wrapper.top-panel,
@@ -794,6 +795,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 #checkin-audio .audio-container:has(button[title*="Record"]),
 #checkin-audio.smc-record-idle .audio-container {
     min-height: 112px !important;
+    position: relative !important;
 }
 #checkin-audio .record-button,
 #checkin-audio .smc-record-button,
@@ -802,6 +804,15 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     margin: 0 auto !important;
     align-self: center !important;
     justify-self: center !important;
+}
+#checkin-audio.smc-record-idle .smc-record-button {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: auto !important;
+    min-width: max-content !important;
+    z-index: 2 !important;
 }
 /* Keep the playback control icons (volume / speed / reset / trim) as plain
    transparent icon buttons — no bordered boxes. */
