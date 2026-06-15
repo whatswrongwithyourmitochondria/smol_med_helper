@@ -377,10 +377,10 @@ body, .gradio-container {
 }
 .app-sub {
     font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: var(--muted) !important;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-transform: none;
     margin: 0;
 }
 
@@ -935,7 +935,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 HEADER_HTML = """
 <div class="app-header">
     <h1 class="app-title">Patient Scribe</h1>
-    <p class="app-sub">Voice-first &nbsp;·&nbsp; Camera-assisted &nbsp;·&nbsp; Appointment-ready</p>
+    <p class="app-sub">&middot; Get ready for the next appointment &middot;</p>
 </div>
 """
 
