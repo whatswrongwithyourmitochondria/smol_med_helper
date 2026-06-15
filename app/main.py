@@ -244,19 +244,15 @@ def _speech_text_from_markdown(text: str) -> str:
 
 
 @spaces.GPU(duration=120)
-def handle_brief(days: int) -> tuple[str, object]:
-    brief_text = generate_brief(days=int(days))
-    return brief_text, gr.update(visible=False)
+def handle_brief(days: int) -> str:
+    return generate_brief(days=int(days))
 
 
-def handle_brief_read(brief_text: str) -> object:
+def handle_brief_read(brief_text: str) -> str:
     if not brief_text or brief_text.startswith("No log"):
-        return gr.update(visible=False)
+        return _EMPTY_AUDIO_HTML
     audio_bytes = speak(_speech_text_from_markdown(brief_text))
-    tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-    tmp.write(audio_bytes)
-    tmp.close()
-    return gr.update(visible=True, value=tmp.name)
+    return _make_audio_html(audio_bytes)
 
 
 def handle_history() -> str:
@@ -906,16 +902,11 @@ with gr.Blocks(title="Health Companion") as demo:
                 elem_classes=["brief-box"],
             )
             read_brief_btn = gr.Button("🔊  Read Aloud", variant="secondary")
-            brief_audio_out = gr.Audio(
-                label="🔊  Brief read aloud",
-                autoplay=False,
-                interactive=False,
-                visible=False,
-            )
+            brief_audio_out = gr.HTML(value=_EMPTY_AUDIO_HTML)
             brief_btn.click(
                 handle_brief,
                 inputs=days_slider,
-                outputs=[brief_out, brief_audio_out],
+                outputs=brief_out,
             )
             read_brief_btn.click(
                 handle_brief_read,
