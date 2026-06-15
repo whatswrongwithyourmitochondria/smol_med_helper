@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 import os
 
-_USE_VOXCPM = os.getenv("USE_VOXCPM", "1") == "1"
+_USE_VOXCPM = os.getenv("USE_VOXCPM", "0") == "1"
 _vox_model = None
 _kokoro_pipeline = None
 
