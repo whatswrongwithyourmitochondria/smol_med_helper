@@ -778,22 +778,16 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 #checkin-audio [aria-haspopup="listbox"] {
     display: none !important;
 }
-#checkin-audio .audio-container:has(.record-button),
-#checkin-audio .audio-container:has(button[aria-label*="Record"]),
-#checkin-audio .audio-container:has(button[title*="Record"]),
 #checkin-audio.smc-record-idle .audio-container,
-#checkin-audio .recording-container:has(.record-button),
-#checkin-audio .recording-container:has(button[aria-label*="Record"]),
-#checkin-audio .recording-container:has(button[title*="Record"]),
-#checkin-audio.smc-record-idle .recording-container {
+#checkin-audio.smc-recording .audio-container,
+#checkin-audio.smc-record-idle .recording-container,
+#checkin-audio.smc-recording .recording-container {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
 }
-#checkin-audio .audio-container:has(.record-button),
-#checkin-audio .audio-container:has(button[aria-label*="Record"]),
-#checkin-audio .audio-container:has(button[title*="Record"]),
-#checkin-audio.smc-record-idle .audio-container {
+#checkin-audio.smc-record-idle .audio-container,
+#checkin-audio.smc-recording .audio-container {
     min-height: 112px !important;
     position: relative !important;
 }
@@ -814,7 +808,22 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     min-width: max-content !important;
     z-index: 2 !important;
 }
-#checkin-audio.smc-record-idle .smc-record-noise {
+#checkin-audio.smc-recording .smc-stop-button {
+    margin: 0 auto !important;
+    align-self: center !important;
+    justify-self: center !important;
+}
+#checkin-audio.smc-record-idle .smc-record-noise,
+#checkin-audio.smc-recording .smc-record-noise {
+    display: none !important;
+}
+#checkin-audio .settings-wrapper button[aria-label="Reset audio"],
+#checkin-audio .settings-wrapper button[aria-label*="Reset"],
+#checkin-audio .settings-wrapper button[aria-label*="Remove"],
+#checkin-audio .settings-wrapper button[aria-label*="Delete"],
+#checkin-audio .settings-wrapper button[title*="Reset"],
+#checkin-audio .settings-wrapper button[title*="Remove"],
+#checkin-audio .settings-wrapper button[title*="Delete"] {
     display: none !important;
 }
 #checkin-audio .controls[data-testid="waveform-controls"],
@@ -1016,24 +1025,41 @@ CUSTOM_HEAD = """
     [50, 200, 600, 1500].forEach(function (t) { setTimeout(killDivider, t); });
 }());
 
-// Center the idle Check-in "Record" control without affecting playback controls
-// after a recording exists. Gradio's generated classes change, so mark by text.
+// Keep Check-in recorder states clean. Gradio's generated classes change, so
+// mark controls by visible text / aria label.
 (function () {
     function markCheckinRecord() {
         var root = document.getElementById('checkin-audio');
         if (!root) return;
         var recordButton = null;
+        var stopButton = null;
+        var hasPlayback = !!root.querySelector('[data-testid="waveform-controls"], .play-pause-wrapper');
         root.querySelectorAll('button').forEach(function (button) {
-            var text = (button.textContent || '').replace(/\\s+/g, ' ').trim();
+            var text = [
+                button.textContent || '',
+                button.getAttribute('aria-label') || '',
+                button.getAttribute('title') || ''
+            ].join(' ').replace(/\\s+/g, ' ').trim();
             var isRecord = text === 'Record' || text.endsWith(' Record');
+            var isStop = text === 'Stop' || text.indexOf(' Stop') >= 0 || text.indexOf('Stop recording') >= 0;
+            var isReset = text.indexOf('Reset audio') >= 0 || text.indexOf('Remove') >= 0 || text.indexOf('Delete') >= 0;
             button.classList.toggle('smc-record-button', isRecord);
-            button.classList.toggle('smc-record-noise', !isRecord);
-            if (isRecord) recordButton = button;
+            button.classList.toggle('smc-stop-button', isStop);
+            button.classList.toggle('smc-reset-button', isReset);
+            button.classList.remove('smc-record-noise');
+            if (isRecord && button.offsetParent !== null) recordButton = button;
+            if (isStop && button.offsetParent !== null) stopButton = button;
         });
-        root.classList.toggle('smc-record-idle', !!recordButton);
-        if (!recordButton) {
-            root.querySelectorAll('.smc-record-noise').forEach(function (el) {
-                el.classList.remove('smc-record-noise');
+        var isRecording = !!stopButton && !hasPlayback;
+        var isIdle = !!recordButton && !isRecording && !hasPlayback;
+        root.classList.toggle('smc-record-idle', isIdle);
+        root.classList.toggle('smc-recording', isRecording);
+        if (isIdle || isRecording) {
+            root.querySelectorAll('button').forEach(function (button) {
+                var keep = isIdle
+                    ? button.classList.contains('smc-record-button')
+                    : button.classList.contains('smc-stop-button');
+                button.classList.toggle('smc-record-noise', !keep);
             });
         }
     }
