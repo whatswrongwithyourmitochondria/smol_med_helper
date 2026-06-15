@@ -363,47 +363,50 @@ body, .gradio-container {
     margin: 0;
 }
 
-/* ── Tabs — element-prefixed so Gradio's CSS parser keeps them ── */
-div.tab-container {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    padding: 0 !important;
-    margin-bottom: 14px !important;
-    gap: 8px !important;
-    justify-content: center !important;
-}
-/* Remove every box / line / fill that Gradio draws around the tab strip,
-   on every wrapper level. Individual tab chips (button.svelte-11gaq1) keep
-   their own border, set separately below. */
+/* ── Tabs — plain text, no boxes, no divider ──
+   Selectors are qualified with .svelte-11gaq1 so they match Gradio's own
+   scoped rules (e.g. .tab-wrapper.svelte-11gaq1) on specificity and win. */
+.tab-wrapper.svelte-11gaq1,
+div.tab-container.svelte-11gaq1,
+.tabs.svelte-11gaq1,
 .tabs, div.tabs,
 .tabs > div, .tab-wrapper, div.tab-container,
 .tab-nav, [role="tablist"],
 [role="tabpanel"], .tabitem {
     background: transparent !important;
     border: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
     box-shadow: none !important;
     outline: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+}
+div.tab-container.svelte-11gaq1[role="tablist"] {
+    margin-bottom: 14px !important;
+    gap: 8px !important;
+    justify-content: center !important;
 }
 .tabs::before, .tabs::after,
 .tabs > div::before, .tabs > div::after,
+.tab-wrapper.svelte-11gaq1::before, .tab-wrapper.svelte-11gaq1::after,
 .tab-wrapper::before, .tab-wrapper::after,
 .tab-nav::before, .tab-nav::after { display: none !important; content: none !important; }
 /* Keep every tab panel full width so the layout doesn't jump between tabs */
 [role="tabpanel"], .tabitem { width: 100% !important; }
+/* Tab buttons are plain text — no box, no border, no fill. Only the colour changes. */
 button.svelte-11gaq1 {
     font-family: 'Tomorrow', monospace !important;
-    font-size: 0.8rem !important;
+    font-size: 0.82rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.5px !important;
-    border-radius: 12px !important;
-    padding: 13px 20px !important;
-    min-height: 46px !important;
-    border: 1px solid var(--border) !important;
-    background: var(--surface) !important;
+    border-radius: 0 !important;
+    padding: 10px 16px !important;
+    min-height: 0 !important;
+    border: none !important;
+    background: transparent !important;
     color: var(--muted) !important;
-    transition: all 0.22s ease !important;
+    transition: color 0.2s ease !important;
     white-space: nowrap !important;
     display: inline-flex !important;
     align-items: center !important;
@@ -415,18 +418,19 @@ button.svelte-11gaq1 {
 /* Nudge emoji glyphs to sit on the same optical baseline as the label text */
 button.svelte-11gaq1 > * { vertical-align: middle !important; }
 button.svelte-11gaq1:hover:not(.selected) {
-    background: var(--surface2) !important;
+    background: transparent !important;
     color: var(--text) !important;
 }
 button.svelte-11gaq1:focus,
 button.svelte-11gaq1:focus-visible {
     outline: none !important;
     box-shadow: none !important;
+    background: transparent !important;
 }
 button.selected.svelte-11gaq1 {
-    background: var(--surface) !important;
+    background: transparent !important;
     color: #f97316 !important;
-    border: 1px solid #f97316 !important;
+    border: none !important;
     box-shadow: none !important;
     outline: none !important;
     text-shadow: none !important;
@@ -678,6 +682,16 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 
 /* ── Audio ── */
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
+
+/* ── Hide the clear / × (remove) button in the check-in mic widget ── */
+#checkin-audio button[aria-label="Clear"],
+#checkin-audio button[aria-label="Remove"],
+#checkin-audio button[aria-label="Reset"],
+#checkin-audio button[title="Clear"],
+#checkin-audio .icon-button-wrapper,
+#checkin-audio .controls > .icon-button-wrapper {
+    display: none !important;
+}
 
 /* ── Big Record button in the check-in mic widget ── */
 #checkin-audio .record-button,
