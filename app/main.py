@@ -829,8 +829,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 #checkin-audio .settings-wrapper button[title*="Trim"] {
     display: none !important;
 }
-#checkin-audio .controls[data-testid="waveform-controls"],
-#checkin-audio .controls {
+#checkin-audio .controls[data-testid="waveform-controls"] {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
     align-items: center !important;
@@ -854,8 +853,10 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     justify-self: end !important;
 }
 /* Keep the playback control icons (volume / speed / reset / trash) as plain
-   transparent icon buttons — no bordered boxes. */
-#checkin-audio .controls button,
+   transparent icon buttons — no bordered boxes. Scoped to the playback
+   waveform controls so it never force-shows the recorder's Record/Stop/Pause
+   buttons (Gradio toggles those itself via display:none). */
+#checkin-audio .controls[data-testid="waveform-controls"] button,
 #checkin-audio .control-wrapper button,
 #checkin-audio .play-pause-wrapper button,
 #checkin-audio .settings-wrapper button,
@@ -887,8 +888,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     text-align: center !important;
     line-height: 1 !important;
 }
-#checkin-audio button svg,
-#checkin-audio .controls svg,
+#checkin-audio .controls[data-testid="waveform-controls"] svg,
 #checkin-audio .control-wrapper svg,
 #checkin-audio .play-pause-wrapper svg,
 #checkin-audio .settings-wrapper svg,
