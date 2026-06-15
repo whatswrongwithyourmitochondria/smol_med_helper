@@ -335,9 +335,10 @@ html, body {
 *, *::before, *::after { box-sizing: border-box; }
 body, .gradio-container {
     background-color: var(--bg) !important;
-    background-image: url('/gradio_api/file=assets/bg-pattern.png') !important;
-    background-repeat: repeat !important;
-    background-size: 360px auto !important;
+    background-image: url('/gradio_api/file=assets/bg-cover.png') !important;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
+    background-position: center center !important;
     background-attachment: fixed !important;
     font-family: 'Inter', sans-serif !important;
     color: var(--text) !important;
