@@ -822,8 +822,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     min-width: max-content !important;
     z-index: 2 !important;
 }
-#checkin-audio.smc-record-idle .smc-record-noise,
-#checkin-audio.smc-recording .smc-record-noise {
+#checkin-audio .smc-record-noise {
     display: none !important;
 }
 #checkin-audio .settings-wrapper button[aria-label*="Trim"],
@@ -1084,17 +1083,26 @@ CUSTOM_HEAD = """
         if (primaryPause) primaryPause.classList.add('smc-pause-button');
 
         var isRecording = !!primaryStop && !hasPlayback;
-        var isIdle = !!primaryRecord && !isRecording && !hasPlayback;
+        // Default to idle whenever we're not actively recording or in playback,
+        // even if the Record button wasn't matched on this pass. This guarantees
+        // Stop/Pause are never left visible before recording starts.
+        var isIdle = !isRecording && !hasPlayback;
         root.classList.toggle('smc-record-idle', isIdle);
         root.classList.toggle('smc-recording', isRecording);
-        if (isIdle || isRecording) {
-            buttons.forEach(function (button) {
-                var keep = isIdle
-                    ? button.classList.contains('smc-record-button')
-                    : button.classList.contains('smc-stop-button') || button.classList.contains('smc-pause-button');
-                button.classList.toggle('smc-record-noise', !keep);
-            });
-        }
+        // Always reconcile the Record/Stop/Pause buttons against the current
+        // state. Only these three are managed here — native playback controls
+        // (play, volume, reset, trim) are never touched.
+        buttons.forEach(function (button) {
+            var isRec = button.classList.contains('smc-record-button');
+            var isStopOrPause = button.classList.contains('smc-stop-button')
+                || button.classList.contains('smc-pause-button');
+            if (!isRec && !isStopOrPause) {
+                button.classList.remove('smc-record-noise');
+                return;
+            }
+            var keep = isRecording ? isStopOrPause : (isIdle ? isRec : true);
+            button.classList.toggle('smc-record-noise', !keep);
+        });
     }
     markCheckinRecord();
     new MutationObserver(markCheckinRecord).observe(document.documentElement, {
