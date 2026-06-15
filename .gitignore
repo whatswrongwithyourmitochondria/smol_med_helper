@@ -4,9 +4,14 @@ __pycache__/
 .gradio/
 data/logs/
 models/
-finetune/data/
-finetune/output/
+finetune/
 .venv/
+
+# Dev tooling / docs — keep local, not on the HF Space
+.claude/
+.codex/
+/CLAUDE.md
+demo_photos/
 
 # Dev screenshots + throwaway scripts
 ui_*.png
