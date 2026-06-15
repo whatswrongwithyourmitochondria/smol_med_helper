@@ -825,6 +825,18 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 #checkin-audio .smc-record-noise {
     display: none !important;
 }
+/* Recorder buttons (Record / Stop / Pause / Resume) as plain borderless
+   controls — no box. Visibility stays with Gradio (no display override). */
+#checkin-audio .controls .record-button,
+#checkin-audio .controls .stop-button,
+#checkin-audio .controls .stop-button-paused,
+#checkin-audio .controls .pause-button,
+#checkin-audio .controls .resume-button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0.2rem 0.4rem !important;
+}
 #checkin-audio .settings-wrapper button[aria-label*="Trim"],
 #checkin-audio .settings-wrapper button[title*="Trim"] {
     display: none !important;
