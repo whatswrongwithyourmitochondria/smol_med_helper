@@ -654,7 +654,15 @@ label > span, .label-wrap > span {
 
 /* ── Slider ── */
 input[type=range] { accent-color: var(--cyan) !important; height: 6px !important; }
-/* Days slider: inset to align with card-contained content above/below */
+/* Days slider: NO box around the bar — strip the card off it and its wrappers */
+.days-slider,
+.days-slider.block, .days-slider .block, .days-slider .form {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
 .days-slider { padding: 4px 16px 10px !important; margin: 0 0 4px !important; }
 .days-slider .head, .days-slider .wrap { padding: 0 !important; }
 /* Show ONLY the bar — hide the number readout box and the reset arrow */
@@ -702,35 +710,16 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 
 /* ── Audio ── */
 .waveform-container, .waveform-container * { background: var(--bg) !important; }
-
-/* ── Hide the clear / × (remove) button in the check-in mic widget ── */
-#checkin-audio button[aria-label="Clear"],
-#checkin-audio button[aria-label="Remove"],
-#checkin-audio button[aria-label="Reset"],
-#checkin-audio button[title="Clear"],
-#checkin-audio .icon-button-wrapper,
-#checkin-audio .controls > .icon-button-wrapper {
-    display: none !important;
-}
-
-/* ── Big Record button in the check-in mic widget ── */
-#checkin-audio .record-button,
-#checkin-audio button.record,
-#checkin-audio .controls button:first-child,
-#checkin-audio .record {
-    min-height: 60px !important;
-    font-size: 1.15rem !important;
-    font-weight: 700 !important;
-    padding: 0 30px !important;
-    border-radius: 14px !important;
-    background: var(--surface2) !important;
-    border: 1px solid var(--cyan) !important;
-    color: var(--text) !important;
-}
-#checkin-audio .record-button:hover,
-#checkin-audio button.record:hover,
-#checkin-audio .controls button:first-child:hover {
-    box-shadow: 0 0 16px rgba(0,210,255,0.18) !important;
+/* Keep the playback control icons (volume / speed / reset / trim) as plain
+   transparent icon buttons — no bordered boxes. */
+#checkin-audio .controls button,
+#checkin-audio .control-wrapper button,
+#checkin-audio .settings-wrapper button,
+#checkin-audio button.action.icon {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    min-height: 0 !important;
 }
 
 /* ── History placeholder / entries — align text inside its box ── */
@@ -798,6 +787,26 @@ CUSTOM_HEAD = """
         { attributes: true, attributeFilter: ['style'] }
     );
     [50, 200, 600, 1500].forEach(function (t) { setTimeout(fix, t); });
+}());
+
+// ── Kill the divider/line under the tab buttons ─────────────────────────────
+// CSS keeps losing the specificity/source-order battle against Gradio's scoped
+// styles, so force it off inline with !important priority (beats any stylesheet).
+(function () {
+    var SEL = '.tabs, .tab-wrapper, .tab-container, [role="tablist"], .tab-nav';
+    function killDivider() {
+        document.querySelectorAll(SEL).forEach(function (el) {
+            el.style.setProperty('border', 'none', 'important');
+            el.style.setProperty('border-bottom', 'none', 'important');
+            el.style.setProperty('box-shadow', 'none', 'important');
+            el.style.setProperty('background', 'transparent', 'important');
+        });
+    }
+    killDivider();
+    new MutationObserver(killDivider).observe(document.documentElement, {
+        childList: true, subtree: true
+    });
+    [50, 200, 600, 1500].forEach(function (t) { setTimeout(killDivider, t); });
 }());
 
 // ── Autoplay for audio injected via gr.HTML ─────────────────────────────────
