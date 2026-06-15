@@ -78,14 +78,8 @@ def _make_canvas_html(pil_img) -> str:
     return _CANVAS_HTML.format(src=_pil_to_b64(thumb))
 
 
-_AUDIO_WRAP = (
-    'background:#0d1526;border:1px solid #192e50;border-radius:12px;padding:10px 14px;'
-)
-
 _EMPTY_AUDIO_HTML = (
-    f'<div style="{_AUDIO_WRAP}">'
     '<audio controls style="width:100%;height:36px;accent-color:#00d2ff;opacity:0.35;"></audio>'
-    '</div>'
 )
 
 
@@ -93,11 +87,10 @@ def _make_audio_html(audio_bytes: bytes) -> str:
     import base64
     audio_b64 = base64.b64encode(audio_bytes).decode()
     return (
-        f'<div style="{_AUDIO_WRAP}">'
         '<audio class="smc-autoplay" controls '
         'style="width:100%;height:36px;accent-color:#00d2ff;">'
         f'<source src="data:audio/wav;base64,{audio_b64}" type="audio/wav">'
-        '</audio></div>'
+        '</audio>'
     )
 
 
@@ -763,7 +756,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 'then <strong style="color:#7a92aa;">Stop</strong>.</p>'
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
-                'Optionally attach a photo — it will appear as a link in your doctor brief.</p>'
+                'Optionally attach a photo.</p>'
             )
             audio_in = gr.Audio(
                 sources=["microphone"],
@@ -812,7 +805,8 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
                 'Point the camera at a <strong style="color:#7a92aa;">medicine box</strong>, '
-                'device screen, or letter.</p>'
+                '<strong style="color:#7a92aa;">device screen</strong>, or '
+                '<strong style="color:#7a92aa;">letter</strong>.</p>'
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
