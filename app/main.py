@@ -1098,9 +1098,10 @@ with gr.Blocks(title="Patient Scribe") as demo:
             gr.HTML(
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
-                'Point the camera at a <strong style="color:#7a92aa;">medicine box</strong>, '
-                '<strong style="color:#7a92aa;">device screen</strong>, or '
-                '<strong style="color:#7a92aa;">letter</strong>.</p>'
+                'Point the camera at or Import a '
+                '<strong style="color:#00d2ff;">medicine box</strong>, '
+                '<strong style="color:#00d2ff;">device screen</strong>, or '
+                '<strong style="color:#00d2ff;">letter</strong>.</p>'
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
