@@ -334,11 +334,20 @@ html, body {
 /* ── Base ── */
 *, *::before, *::after { box-sizing: border-box; }
 body, .gradio-container {
-    background: var(--bg) !important;
+    background-color: var(--bg) !important;
+    background-image: url('/gradio_api/file=assets/bg-pattern.png') !important;
+    background-repeat: repeat !important;
+    background-size: 360px auto !important;
+    background-attachment: fixed !important;
     font-family: 'Inter', sans-serif !important;
     color: var(--text) !important;
 }
-.gradio-container { max-width: 960px !important; margin: 0 auto !important; }
+.gradio-container {
+    max-width: 960px !important;
+    margin: 0 auto !important;
+    background-image: none !important;  /* pattern only on the page body, not the column */
+    background-color: transparent !important;
+}
 .contain, .wrap, .svelte-1gfkn6j { background: transparent !important; }
 
 /* ── Hero header ── */
@@ -455,7 +464,9 @@ button.selected.svelte-11gaq1::after {
 
 /* ── Cards / blocks ── */
 .block, .gr-group, .panel, .form {
-    background: var(--surface) !important;
+    background: rgba(13, 21, 38, 0.72) !important;  /* semi-transparent so the heart pattern shows through */
+    backdrop-filter: blur(2px) !important;
+    -webkit-backdrop-filter: blur(2px) !important;
     border: 1px solid var(--border) !important;
     border-radius: 18px !important;
 }
@@ -1083,4 +1094,4 @@ with gr.Blocks(title="Patient Scribe") as demo:
 
 
 if __name__ == "__main__":
-    demo.launch(css=CSS, theme=THEME, head=CUSTOM_HEAD, allowed_paths=["data"])
+    demo.launch(css=CSS, theme=THEME, head=CUSTOM_HEAD, allowed_paths=["data", "assets"])
