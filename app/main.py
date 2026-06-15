@@ -342,12 +342,13 @@ body, .gradio-container {
 
 /* ── Tabs — element-prefixed so Gradio's CSS parser keeps them ── */
 div.tab-container {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 18px !important;
-    padding: 7px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
     margin-bottom: 14px !important;
-    gap: 4px !important;
+    gap: 8px !important;
     justify-content: center !important;
 }
 /* Remove Gradio's default full-width separator line around the tab strip.
@@ -371,9 +372,8 @@ button.svelte-11gaq1 {
     border-radius: 12px !important;
     padding: 13px 20px !important;
     min-height: 46px !important;
-    border: none !important;
-    border-bottom: none !important;
-    background: transparent !important;
+    border: 1px solid var(--border) !important;
+    background: var(--surface) !important;
     color: var(--muted) !important;
     transition: all 0.22s ease !important;
     white-space: nowrap !important;
@@ -390,11 +390,15 @@ button.svelte-11gaq1:hover:not(.selected) {
     background: var(--surface2) !important;
     color: var(--text) !important;
 }
+button.svelte-11gaq1:focus,
+button.svelte-11gaq1:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
 button.selected.svelte-11gaq1 {
-    background: transparent !important;
+    background: var(--surface) !important;
     color: #f97316 !important;
-    border: none !important;
-    border-bottom: none !important;
+    border: 1px solid #f97316 !important;
     box-shadow: none !important;
     outline: none !important;
     text-shadow: none !important;
@@ -597,15 +601,51 @@ label > span, .label-wrap > span {
 
 /* ── Slider ── */
 input[type=range] { accent-color: var(--cyan) !important; height: 6px !important; }
-/* Days slider: inset to align with card-contained content above/below;
-   keep label + number box and the track on the same horizontal bounds */
+/* Days slider: inset to align with card-contained content above/below */
 .days-slider { padding: 4px 16px 10px !important; margin: 0 0 4px !important; }
 .days-slider .head, .days-slider .wrap { padding: 0 !important; }
+/* Remove the boxes around the number value and the reset arrow */
+.days-slider input[type=number],
+.days-slider .number-input,
+.days-slider input[type=number]:focus {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    text-align: right !important;
+}
+.days-slider button,
+.days-slider .reset-button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
 
-/* ── Read Aloud — match the "Attach photo" secondary-button proportions ── */
+/* ── Read Aloud — identical to the "Attach photo" secondary button ── */
 .read-aloud-btn button {
+    font-family: 'Tomorrow', monospace !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.4px !important;
     min-height: 58px !important;
     border-radius: 14px !important;
+    background: var(--surface2) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text) !important;
+}
+.read-aloud-btn button:hover {
+    border-color: rgba(0,210,255,0.4) !important;
+    color: var(--cyan) !important;
+    box-shadow: 0 0 16px rgba(0,210,255,0.1) !important;
+}
+
+/* ── Bare audio — no card box around the player ── */
+.audio-bare, .audio-bare .block, .audio-bare .form,
+.audio-bare .wrap, .audio-bare > * {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
 }
 
 /* ── Audio ── */
@@ -864,7 +904,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 value="", elem_id="crop-coords-box", container=False, label="",
             )
             ocr_btn = gr.Button("🔍  Read It to Me", variant="primary")
-            ocr_audio_out = gr.HTML(value=_EMPTY_AUDIO_HTML)
+            ocr_audio_out = gr.HTML(value=_EMPTY_AUDIO_HTML, elem_classes=["audio-bare"])
             ocr_out = gr.Textbox(
                 label="📄  Extracted text",
                 lines=7,
@@ -923,7 +963,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
             read_brief_btn = gr.Button(
                 "🔊  Read Aloud", variant="secondary", elem_classes=["read-aloud-btn"],
             )
-            brief_audio_out = gr.HTML(value=_EMPTY_AUDIO_HTML)
+            brief_audio_out = gr.HTML(value=_EMPTY_AUDIO_HTML, elem_classes=["audio-bare"])
             brief_btn.click(
                 handle_brief,
                 inputs=days_slider,
