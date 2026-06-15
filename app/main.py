@@ -767,10 +767,35 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 #checkin-audio {
     overflow: hidden !important;
 }
+#checkin-audio .top-panel,
+#checkin-audio .icon-button-wrapper.top-panel,
+#checkin-audio .icon-button-wrapper.hide-top-corner {
+    display: none !important;
+}
 #checkin-audio select,
 #checkin-audio [role="combobox"],
 #checkin-audio [aria-haspopup="listbox"] {
     display: none !important;
+}
+#checkin-audio .audio-container:has(.record-button),
+#checkin-audio .audio-container:has(button[aria-label*="Record"]),
+#checkin-audio .audio-container:has(button[title*="Record"]),
+#checkin-audio .recording-container:has(.record-button),
+#checkin-audio .recording-container:has(button[aria-label*="Record"]),
+#checkin-audio .recording-container:has(button[title*="Record"]) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+#checkin-audio .audio-container:has(.record-button),
+#checkin-audio .audio-container:has(button[aria-label*="Record"]),
+#checkin-audio .audio-container:has(button[title*="Record"]) {
+    min-height: 112px !important;
+}
+#checkin-audio .record-button,
+#checkin-audio button[aria-label*="Record"],
+#checkin-audio button[title*="Record"] {
+    margin: 0 auto !important;
 }
 /* Keep the playback control icons (volume / speed / reset / trim) as plain
    transparent icon buttons — no bordered boxes. */
