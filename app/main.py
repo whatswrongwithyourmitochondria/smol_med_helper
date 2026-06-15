@@ -317,7 +317,6 @@ body, .gradio-container {
 .app-header {
     text-align: center;
     padding: 2.2rem 1rem 1.2rem;
-    border-bottom: 1px solid var(--border);
     margin-bottom: 1.4rem;
 }
 .app-title {
@@ -350,6 +349,16 @@ div.tab-container {
     margin-bottom: 14px !important;
     gap: 4px !important;
     justify-content: center !important;
+}
+/* Remove Gradio's default separator line below the tab strip */
+.tabs > div:not([role="tabpanel"]),
+[role="tablist"],
+.tab-nav {
+    border-bottom: none !important;
+    outline: none !important;
+}
+.tabitem, [role="tabpanel"] {
+    border-top: none !important;
 }
 button.svelte-11gaq1 {
     font-family: 'Tomorrow', monospace !important;
@@ -888,6 +897,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
             days_slider = gr.Slider(
                 7, 90, value=30, step=1,
                 label="📅  Days to include",
+                container=False,
             )
             brief_btn = gr.Button("📋  Generate Brief", variant="primary")
             brief_out = gr.Textbox(
