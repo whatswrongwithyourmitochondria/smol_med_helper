@@ -9,8 +9,8 @@ from app import log as log_module
 
 _COMPRESS_SYSTEM = """Condense this health log brief for a doctor's appointment.
 Keep EXACTLY these six section headers: ## New, ## Changed, ## Resolved, ## Ongoing, ## Readings, ## Questions to raise
-- At most 2 compact bullet points per section
-- Merge repeated mentions; keep all dates and numbers
+- Deduplicate repeated records, including repeated text attached to different photos
+- Merge repeated mentions; keep all dates and numbers that add new information
 - Keep any "(see image)" marker exactly where it appears — never drop it
 - Plain spoken English — this will be read aloud to the patient
 - If a section has nothing, write exactly: Nothing to report.
@@ -62,11 +62,92 @@ QUESTION_KEYWORDS = (
     "glucose",
     "blood pressure",
 )
+SECTION_TITLES = ("New", "Changed", "Resolved", "Ongoing", "Readings", "Questions to raise")
+SECTION_ALIASES = {
+    "new": "New",
+    "changed": "Changed",
+    "resolved": "Resolved",
+    "ongoing": "Ongoing",
+    "readings": "Readings",
+    "questions": "Questions to raise",
+    "questions to raise": "Questions to raise",
+}
+NOTHING = "Nothing to report."
 
 
 def _section(title: str, items: list[str]) -> str:
-    body = "\n".join(f"- {item}" for item in items) if items else "Nothing to report."
+    body = "\n".join(f"- {item}" for item in items) if items else NOTHING
     return f"## {title}\n{body}"
+
+
+def _entry_key(d: date, entry: dict) -> tuple[str, str, str]:
+    content = re.sub(r"\s+", " ", str(entry.get("content", "")).strip()).lower()
+    entry_type = str(entry.get("type", ""))
+    if entry_type != "reading" and _looks_like_reading(content):
+        entry_type = "reading"
+    return d.isoformat(), entry_type, content
+
+
+def _dedupe_entries(dated_entries: list[tuple[date, dict]]) -> list[tuple[date, dict]]:
+    seen = set()
+    deduped = []
+    for d, entry in dated_entries:
+        key = _entry_key(d, entry)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append((d, entry))
+    return deduped
+
+
+def _canonical_section_title(line: str) -> str | None:
+    title = line.strip().lstrip("#").strip().rstrip(":")
+    return SECTION_ALIASES.get(title.lower())
+
+
+def _normalise_item(line: str) -> str:
+    item = line.strip()
+    while item.startswith(("-", "*", "\u2022")):
+        item = item[1:].strip()
+    return " ".join(item.split())
+
+
+def _item_key(item: str) -> str:
+    item = item.replace("(see image)", "").strip()
+    return re.sub(r"\s+", " ", item).lower()
+
+
+def _post_process_brief(brief: str) -> str:
+    sections: dict[str, list[str]] = {title: [] for title in SECTION_TITLES}
+    current: str | None = None
+
+    for raw_line in brief.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        title = _canonical_section_title(line)
+        if title:
+            current = title
+            continue
+        if current is None:
+            continue
+        item = _normalise_item(line)
+        if not item or item == NOTHING:
+            continue
+        sections[current].append(item)
+
+    rendered = []
+    for title in SECTION_TITLES:
+        seen = set()
+        items = []
+        for item in sections[title]:
+            key = _item_key(item)
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append(item)
+        rendered.append(_section(title, items))
+    return "\n\n".join(rendered)
 
 
 def _summarize_entry(d: date, entry: dict) -> str:
@@ -102,6 +183,7 @@ def generate_brief(days: int = 30, end: date | None = None) -> str:
     for d in window:
         entries = log_module.get_entries(d)
         dated_entries.extend((d, entry) for entry in entries if entry.get("content"))
+    dated_entries = _dedupe_entries(dated_entries)
 
     readings = [
         _summarize_entry(d, entry)
@@ -124,23 +206,30 @@ def generate_brief(days: int = 30, end: date | None = None) -> str:
 
     raw = "\n\n".join(
         [
-            _section("New", narrative[:8]),
+            _section("New", narrative),
             _section("Changed", []),
             _section("Resolved", []),
-            _section("Ongoing", narrative[8:16]),
-            _section("Readings", readings[:12]),
-            _section("Questions to raise", questions[:8]),
+            _section("Ongoing", []),
+            _section("Readings", readings),
+            _section("Questions to raise", questions),
         ]
     )
-    brief = _compress_brief(raw)
+    brief = _post_process_brief(_compress_brief(raw))
 
     # Append a Photos section with clickable links — built directly (not via the
     # LLM) so the URLs are never mangled by the compression pass.
     photos = [(d, entry["photo"]) for d, entry in dated_entries if entry.get("photo")]
     if photos:
+        seen_photos = set()
+        deduped_photos = []
+        for d, path in photos:
+            if path in seen_photos:
+                continue
+            seen_photos.add(path)
+            deduped_photos.append((d, path))
         links = "\n".join(
             f"- [{d.isoformat()} — view photo](/gradio_api/file={path})"
-            for d, path in photos
+            for d, path in deduped_photos
         )
         brief = f"{brief}\n\n## Photos\n{links}"
 
@@ -149,8 +238,9 @@ def generate_brief(days: int = 30, end: date | None = None) -> str:
 
 def _compress_brief(raw: str) -> str:
     try:
-        from app.llm import complete
-        return complete(raw, extra_system=_COMPRESS_SYSTEM)
+        from app.llm import postprocess_brief
+
+        return postprocess_brief(raw, _COMPRESS_SYSTEM)
     except Exception as exc:
         print(f"[brief] LLM compression failed: {exc}", flush=True)
         return raw

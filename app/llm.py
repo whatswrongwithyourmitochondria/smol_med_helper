@@ -7,6 +7,10 @@ import re
 
 MINICPM_TEXT_MODEL = os.getenv("TEXT_MODEL", "Qwen/Qwen3-4B")
 SAFETY_MODEL = os.getenv("SAFETY_MODEL", "nvidia/Nemotron-3-Content-Safety")
+BRIEF_POSTPROCESS_MODEL = os.getenv(
+    "BRIEF_POSTPROCESS_MODEL",
+    os.getenv("NEMOTRON_NANO_MODEL", "nvidia/Nemotron-3-Nano-4B-Instruct"),
+)
 
 SYSTEM_PROMPT = """You are a health log assistant helping an elderly stroke survivor track his health.
 
@@ -22,6 +26,8 @@ _model = None
 _tokenizer = None
 _safety_model = None
 _safety_processor = None
+_brief_model = None
+_brief_tokenizer = None
 
 _DEFLECTION = (
     "I'm not able to give medical advice on that. "
@@ -137,6 +143,60 @@ def _load():
         )
         _model.eval()
     return _model, _tokenizer
+
+
+def _load_brief_postprocessor():
+    global _brief_model, _brief_tokenizer
+    if _brief_model is None:
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        _brief_tokenizer = AutoTokenizer.from_pretrained(
+            BRIEF_POSTPROCESS_MODEL,
+            trust_remote_code=True,
+        )
+        _brief_model = AutoModelForCausalLM.from_pretrained(
+            BRIEF_POSTPROCESS_MODEL,
+            torch_dtype="auto",
+            device_map="auto",
+            trust_remote_code=True,
+        )
+        _brief_model.eval()
+    return _brief_model, _brief_tokenizer
+
+
+def postprocess_brief(raw_brief: str, system_prompt: str) -> str:
+    """Use Nemotron Nano to compress and deduplicate a structured brief."""
+    import torch
+
+    model, tokenizer = _load_brief_postprocessor()
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": raw_brief},
+    ]
+    try:
+        text = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+            enable_thinking=False,
+        )
+    except TypeError:
+        text = tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    inputs = tokenizer(text, return_tensors="pt").to(model.device)
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=900,
+            temperature=0.1,
+            do_sample=False,
+            pad_token_id=tokenizer.eos_token_id,
+        )
+    new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
+    return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
 
 
 OCR_CLEAN_EXTRA = """The user has photographed a medicine box, device screen, or document.

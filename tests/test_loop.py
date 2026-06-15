@@ -33,3 +33,27 @@ def test_brief_no_entries_returns_message(tmp_path, monkeypatch):
     from app.brief import generate_brief
     result = generate_brief(days=7, end=date(2026, 6, 7))
     assert "No log entries" in result
+
+
+def test_brief_deduplicates_repeated_records(tmp_path, monkeypatch):
+    monkeypatch.setattr(log_module, "LOG_DIR", tmp_path)
+    from app import brief as brief_module
+
+    monkeypatch.setattr(brief_module, "_compress_brief", lambda raw: raw)
+    log_module.add_entry(
+        "One, two, three.",
+        entry_type="checkin",
+        d=date(2026, 6, 7),
+        photo="data/photos/a.jpg",
+    )
+    log_module.add_entry(
+        "One, two, three.",
+        entry_type="checkin",
+        d=date(2026, 6, 7),
+        photo="data/photos/b.jpg",
+    )
+
+    result = brief_module.generate_brief(days=7, end=date(2026, 6, 7))
+
+    assert result.count("One, two, three.") == 1
+    assert result.count("view photo") == 1

@@ -814,6 +814,9 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     min-width: max-content !important;
     z-index: 2 !important;
 }
+#checkin-audio.smc-record-idle .smc-record-noise {
+    display: none !important;
+}
 #checkin-audio .controls[data-testid="waveform-controls"],
 #checkin-audio .controls {
     display: grid !important;
@@ -1024,9 +1027,15 @@ CUSTOM_HEAD = """
             var text = (button.textContent || '').replace(/\\s+/g, ' ').trim();
             var isRecord = text === 'Record' || text.endsWith(' Record');
             button.classList.toggle('smc-record-button', isRecord);
+            button.classList.toggle('smc-record-noise', !isRecord);
             if (isRecord) recordButton = button;
         });
         root.classList.toggle('smc-record-idle', !!recordButton);
+        if (!recordButton) {
+            root.querySelectorAll('.smc-record-noise').forEach(function (el) {
+                el.classList.remove('smc-record-noise');
+            });
+        }
     }
     markCheckinRecord();
     new MutationObserver(markCheckinRecord).observe(document.documentElement, {
