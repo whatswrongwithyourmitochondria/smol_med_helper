@@ -28,12 +28,12 @@ _session_photos: dict[str, str] = {}  # session_hash → full-res temp file path
 
 # ── Handlers ──────────────────────────────────────────────────────────────────
 
-def handle_checkin(audio_path: str | None, photo_path: str | None) -> tuple[str, None]:
+def handle_checkin(audio_path: str | None, photo_path: str | None) -> tuple[str, None, object]:
     if not audio_path:
-        return "", photo_path
+        return "", photo_path, gr.update()
     transcript = transcribe(audio_path)
     log_module.add_entry(transcript, entry_type="checkin", photo=photo_path or None)
-    return transcript, None  # clear photo state after logging
+    return transcript, None, gr.update(visible=False)
 
 
 def _to_pil(source):
@@ -773,17 +773,29 @@ with gr.Blocks(title="Health Companion") as demo:
                 type="filepath",
                 label="🎙️  Your voice",
             )
-            checkin_photo_btn = gr.UploadButton(
-                "📷  Attach photo (optional)",
-                file_types=["image"],
-                type="filepath",
-                variant="secondary",
-            )
+            with gr.Row(elem_classes=["source-actions"]):
+                checkin_photo_btn = gr.UploadButton(
+                    "📷  Attach photo (optional)",
+                    file_types=["image"],
+                    type="filepath",
+                    variant="secondary",
+                    elem_classes=["source-button"],
+                )
+                checkin_photo_clear_btn = gr.Button(
+                    "🗑️",
+                    variant="secondary",
+                    visible=False,
+                    elem_classes=["source-button", "clear-photo-button"],
+                )
             checkin_photo_state = gr.State(None)
             checkin_photo_btn.upload(
-                lambda p: p,
+                lambda p: (p, gr.update(visible=True)),
                 inputs=checkin_photo_btn,
-                outputs=checkin_photo_state,
+                outputs=[checkin_photo_state, checkin_photo_clear_btn],
+            )
+            checkin_photo_clear_btn.click(
+                lambda: (None, gr.update(visible=False)),
+                outputs=[checkin_photo_state, checkin_photo_clear_btn],
             )
             checkin_btn = gr.Button("⬆️  Log Check-in", variant="primary")
             transcript_out = gr.Textbox(
@@ -794,7 +806,7 @@ with gr.Blocks(title="Health Companion") as demo:
             checkin_btn.click(
                 handle_checkin,
                 inputs=[audio_in, checkin_photo_state],
-                outputs=[transcript_out, checkin_photo_state],
+                outputs=[transcript_out, checkin_photo_state, checkin_photo_clear_btn],
             )
 
         # ── 📷 Camera & Read ──────────────────────────────────────────────────
