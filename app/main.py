@@ -365,7 +365,7 @@ body, .gradio-container {
 }
 .app-title {
     font-family: 'Tomorrow', monospace;
-    font-size: clamp(1.9rem, 5vw, 2.8rem);
+    font-size: clamp(2.25rem, 5.6vw, 3.25rem);
     font-weight: 700;
     letter-spacing: 3px;
     background: linear-gradient(95deg, #00d2ff 0%, #3a7bd5 48%, #c471ed 100%);
@@ -384,11 +384,7 @@ body, .gradio-container {
     margin: 0;
 }
 
-/* ── Tabs — plain text, no boxes, no divider ──
-   The full-width line under the tabs is a border-bottom on .tab-wrapper.
-   Gradio's rule (.tab-wrapper.svelte-11gaq1, 0-2-0) loads AFTER ours, so equal
-   specificity loses on source order. Parent-chain selectors below raise the
-   specificity (0-4-2) to win outright. */
+/* ── Tabs — plain text, no boxes, no divider ── */
 div.tabs.svelte-11gaq1,
 div.tabs.svelte-11gaq1 > div.tab-wrapper.svelte-11gaq1,
 div.tabs.svelte-11gaq1 div.tab-container.svelte-11gaq1,
@@ -396,7 +392,9 @@ div.tabs.svelte-11gaq1 div.tab-container.svelte-11gaq1,
 div.tab-container.svelte-11gaq1,
 .tabs.svelte-11gaq1,
 .tabs, div.tabs,
-.tabs > div, .tab-wrapper, div.tab-container,
+.tabs > div, .tabs > div > div,
+.tab-wrapper, div.tab-container,
+[class*="tab-wrapper"], [class*="tab-container"],
 .tab-nav, [role="tablist"],
 [role="tabpanel"], .tabitem {
     background: transparent !important;
@@ -408,29 +406,40 @@ div.tab-container.svelte-11gaq1,
     border-radius: 0 !important;
     padding: 0 !important;
 }
-div.tabs.svelte-11gaq1 > div.tab-wrapper.svelte-11gaq1 > div.tab-container.svelte-11gaq1[role="tablist"] {
+div.tabs.svelte-11gaq1 > div.tab-wrapper.svelte-11gaq1 > div.tab-container.svelte-11gaq1[role="tablist"],
+.tabs [role="tablist"],
+[role="tablist"] {
     margin-bottom: 14px !important;
     gap: 8px !important;
     justify-content: center !important;
 }
 .tabs::before, .tabs::after,
 .tabs > div::before, .tabs > div::after,
+.tabs > div > div::before, .tabs > div > div::after,
 .tab-wrapper.svelte-11gaq1::before, .tab-wrapper.svelte-11gaq1::after,
 .tab-wrapper::before, .tab-wrapper::after,
+.tab-container::before, .tab-container::after,
+[class*="tab-wrapper"]::before, [class*="tab-wrapper"]::after,
+[class*="tab-container"]::before, [class*="tab-container"]::after,
+[role="tablist"]::before, [role="tablist"]::after,
 .tab-nav::before, .tab-nav::after { display: none !important; content: none !important; }
 /* Keep every tab panel full width so the layout doesn't jump between tabs */
 [role="tabpanel"], .tabitem { width: 100% !important; }
 /* Tab buttons are plain text — no box, no border, no fill. Only the colour changes. */
-button.svelte-11gaq1 {
+.tabs button,
+button.svelte-11gaq1[role="tab"],
+[role="tab"] {
     font-family: 'Tomorrow', monospace !important;
-    font-size: 0.82rem !important;
+    font-size: 1rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.5px !important;
     border-radius: 0 !important;
-    padding: 10px 16px !important;
+    padding: 12px 18px !important;
     min-height: 0 !important;
     border: none !important;
+    border-bottom: none !important;
     background: transparent !important;
+    background-image: none !important;
     color: var(--muted) !important;
     transition: color 0.2s ease !important;
     white-space: nowrap !important;
@@ -442,31 +451,48 @@ button.svelte-11gaq1 {
     vertical-align: middle !important;
 }
 /* Nudge emoji glyphs to sit on the same optical baseline as the label text */
-button.svelte-11gaq1 > * { vertical-align: middle !important; }
-button.svelte-11gaq1:hover:not(.selected) {
+.tabs button > *,
+[role="tab"] > * { vertical-align: middle !important; }
+.tabs button:hover:not(.selected),
+[role="tab"]:hover:not(.selected) {
     background: transparent !important;
     color: var(--text) !important;
 }
-button.svelte-11gaq1:focus,
-button.svelte-11gaq1:focus-visible {
+.tabs button:focus,
+.tabs button:focus-visible,
+[role="tab"]:focus,
+[role="tab"]:focus-visible {
     outline: none !important;
     box-shadow: none !important;
     background: transparent !important;
 }
-button.selected.svelte-11gaq1 {
+.tabs button.selected,
+.tabs button[aria-selected="true"],
+[role="tab"].selected,
+[role="tab"][aria-selected="true"] {
     background: transparent !important;
     color: #f97316 !important;
     border: none !important;
+    border-bottom: none !important;
     box-shadow: none !important;
     outline: none !important;
     text-shadow: none !important;
 }
-/* Kill the orange underline — (0,2,2) beats Gradio's (0,2,1) and has !important */
-button.selected.svelte-11gaq1::after {
+/* Kill tab underlines and full-width separators, including Gradio pseudo-elements. */
+.tabs button::before, .tabs button::after,
+button.svelte-11gaq1[role="tab"]::before,
+button.svelte-11gaq1[role="tab"]::after,
+[role="tab"]::before, [role="tab"]::after,
+.tabs button.selected::before, .tabs button.selected::after,
+.tabs button[aria-selected="true"]::before, .tabs button[aria-selected="true"]::after,
+[role="tab"].selected::before, [role="tab"].selected::after,
+[role="tab"][aria-selected="true"]::before, [role="tab"][aria-selected="true"]::after {
     background-color: transparent !important;
     background: transparent !important;
     display: none !important;
     height: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
 }
 
 /* ── Cards / blocks ── */
@@ -592,15 +618,18 @@ button.primary:active {
         height: auto !important;
     }
     /* The wrapper's height comes from the invisible clone — let it grow too */
-    .tab-wrapper.svelte-11gaq1 {
+    .tab-wrapper.svelte-11gaq1,
+    [class*="tab-wrapper"] {
         height: auto !important;
         overflow: visible !important;
     }
-    button.svelte-11gaq1 {
+    .tabs button,
+    button.svelte-11gaq1[role="tab"],
+    [role="tab"] {
         flex: 1 1 calc(50% - 8px) !important;
         min-width: 0 !important;
         padding: 11px 8px !important;
-        font-size: 0.72rem !important;
+        font-size: 0.9rem !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
@@ -810,13 +839,43 @@ CUSTOM_HEAD = """
 // CSS keeps losing the specificity/source-order battle against Gradio's scoped
 // styles, so force it off inline with !important priority (beats any stylesheet).
 (function () {
-    var SEL = '.tabs, .tab-wrapper, .tab-container, [role="tablist"], .tab-nav';
+    var TAB_CSS = [
+        '.tabs,.tabs>div,.tabs>div>div,.tab-wrapper,.tab-container,',
+        '[class*="tab-wrapper"],[class*="tab-container"],[role="tablist"],.tab-nav{',
+        'border:0!important;border-bottom:0!important;box-shadow:none!important;',
+        'background:transparent!important;background-image:none!important;}',
+        '.tabs::before,.tabs::after,.tabs>div::before,.tabs>div::after,',
+        '.tabs>div>div::before,.tabs>div>div::after,.tab-wrapper::before,.tab-wrapper::after,',
+        '.tab-container::before,.tab-container::after,[class*="tab-wrapper"]::before,',
+        '[class*="tab-wrapper"]::after,[class*="tab-container"]::before,',
+        '[class*="tab-container"]::after,[role="tablist"]::before,[role="tablist"]::after,',
+        '.tab-nav::before,.tab-nav::after,[role="tab"]::before,[role="tab"]::after,',
+        '.tabs button::before,.tabs button::after{display:none!important;content:none!important;',
+        'height:0!important;border:0!important;box-shadow:none!important;background:transparent!important;}'
+    ].join('');
+    var SEL = '.tabs, .tab-wrapper, .tab-container, [class*="tab-wrapper"], [class*="tab-container"], [role="tablist"], [role="tab"], .tab-nav';
+    function installTabStyle() {
+        var style = document.getElementById('smc-tabs-no-divider');
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'smc-tabs-no-divider';
+            document.head.appendChild(style);
+        }
+        if (style.textContent !== TAB_CSS) style.textContent = TAB_CSS;
+    }
     function killDivider() {
-        document.querySelectorAll(SEL).forEach(function (el) {
+        installTabStyle();
+        var nodes = Array.from(document.querySelectorAll(SEL));
+        document.querySelectorAll('[role="tablist"]').forEach(function (tablist) {
+            [tablist.parentElement, tablist.parentElement && tablist.parentElement.parentElement]
+                .forEach(function (el) { if (el) nodes.push(el); });
+        });
+        nodes.forEach(function (el) {
             el.style.setProperty('border', 'none', 'important');
             el.style.setProperty('border-bottom', 'none', 'important');
             el.style.setProperty('box-shadow', 'none', 'important');
             el.style.setProperty('background', 'transparent', 'important');
+            el.style.setProperty('background-image', 'none', 'important');
         });
     }
     killDivider();
