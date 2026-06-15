@@ -501,51 +501,60 @@ input[type=range] { accent-color: var(--red) !important; height: 6px !important;
 ::-webkit-scrollbar-track { background: var(--cream); }
 ::-webkit-scrollbar-thumb { background: var(--mut); border-radius: 4px; }
 
-/* ── Red photo-attach button (targets label — Gradio UploadButton renders <label>) ── */
-.photo-attach-btn label,
-.photo-attach-btn button {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+/* ── Red photo-attach button — style the outer wrapper directly so source-actions
+   stripping of inner .block/.wrap/.form can't override the visible colour ── */
+.photo-attach-btn {
     background: var(--red) !important;
-    color: #fff !important;
     border: 3px solid var(--ink) !important;
     box-shadow: 3px 4px 0 var(--ink) !important;
     border-radius: 14px !important;
     min-height: 52px !important;
-    width: 100% !important;
+    overflow: hidden !important;
+    transition: transform 0.13s ease, box-shadow 0.13s ease !important;
+    flex: 1 1 0 !important;
+}
+.photo-attach-btn:hover { transform: translateY(-2px) !important; box-shadow: 3px 6px 0 var(--ink) !important; }
+.photo-attach-btn:active { transform: translateY(1px) !important; box-shadow: 1px 2px 0 var(--ink) !important; }
+/* strip inner containers so the wrapper red shows through */
+.photo-attach-btn > *,
+.photo-attach-btn .block,
+.photo-attach-btn .wrap,
+.photo-attach-btn .form {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    height: 100% !important;
+}
+.photo-attach-btn label,
+.photo-attach-btn button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #fff !important;
     font-family: 'Fredoka', sans-serif !important;
     font-weight: 700 !important;
     font-size: 0.9rem !important;
     cursor: pointer !important;
-    transition: transform 0.13s ease, box-shadow 0.13s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-height: 52px !important;
     padding: 0 16px !important;
     gap: 8px !important;
 }
-.photo-attach-btn label:hover,
-.photo-attach-btn button:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 3px 6px 0 var(--ink) !important;
-}
-.photo-attach-btn label:active,
-.photo-attach-btn button:active {
-    transform: translateY(1px) !important;
-    box-shadow: 1px 2px 0 var(--ink) !important;
-}
 
-/* ── Green Log Check-in button ── */
-.checkin-log-btn button {
+/* ── Green Log Check-in button — higher specificity than button.primary ── */
+.checkin-log-btn button.primary {
     background: #27AE60 !important;
     box-shadow: 5px 6px 0 var(--ink) !important;
 }
-.checkin-log-btn button:hover {
-    background: #219150 !important;
-    box-shadow: 5px 9px 0 var(--ink) !important;
-}
-.checkin-log-btn button:active {
-    background: #1a7a42 !important;
-    box-shadow: 2px 3px 0 var(--ink) !important;
-}
+.checkin-log-btn button.primary:hover { background: #219150 !important; box-shadow: 5px 9px 0 var(--ink) !important; }
+.checkin-log-btn button.primary:active { background: #1a7a42 !important; box-shadow: 2px 3px 0 var(--ink) !important; }
+
+/* ── Consistent tab panel width ── */
+.tabitem, .tab-content { width: 100% !important; }
 
 /* ── Falling hearts — visible on golden BG, behind Gradio content ── */
 @keyframes fall {
@@ -777,7 +786,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
             )
 
         # ── 📷 Camera & Read ──────────────────────────────────────────────────
-        with gr.Tab("📷  Camera & Read"):
+        with gr.Tab("📷  Camera"):
             gr.HTML(
                 '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
@@ -850,7 +859,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
             )
 
         # ── 📋 Doctor Brief ───────────────────────────────────────────────────
-        with gr.Tab("📋  Doctor Brief"):
+        with gr.Tab("📋  Brief"):
             gr.HTML(
                 '<p style="text-align:center;color:#8a8064;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
