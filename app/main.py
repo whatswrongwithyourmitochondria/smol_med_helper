@@ -248,6 +248,7 @@ def handle_brief(days: int) -> str:
     return generate_brief(days=int(days))
 
 
+@spaces.GPU(duration=60)
 def handle_brief_read(brief_text: str) -> str:
     if not brief_text or brief_text.startswith("No log"):
         return _EMPTY_AUDIO_HTML
