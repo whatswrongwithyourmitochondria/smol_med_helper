@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import os
+import re
 
 MINICPM_TEXT_MODEL = os.getenv("TEXT_MODEL", "Qwen/Qwen3-4B")
-SAFETY_MODEL = os.getenv("SAFETY_MODEL", "nvidia/Nemotron-3-Nano-4B-Instruct")
+SAFETY_MODEL = os.getenv("SAFETY_MODEL", "nvidia/Nemotron-3-Content-Safety")
 
 SYSTEM_PROMPT = """You are a health log assistant helping an elderly stroke survivor track his health.
 
-STRICT RULES — never break these:
+STRICT RULES - never break these:
 - You NEVER diagnose any condition.
 - You NEVER advise on medication doses, changes, or interactions.
 - You NEVER interpret symptoms as a specific condition.
@@ -20,58 +21,106 @@ Your job: organise, summarise, and read back health log entries clearly."""
 _model = None
 _tokenizer = None
 _safety_model = None
-_safety_tokenizer = None
+_safety_processor = None
 
 _DEFLECTION = (
     "I'm not able to give medical advice on that. "
     "Please discuss this with your doctor or pharmacist."
 )
 
-_SAFETY_PROMPT = (
-    "Does the following text contain a medical diagnosis, symptom interpretation "
-    "as a specific condition, medication dosing advice, or drug interaction advice? "
-    "Answer with only YES or NO.\n\nText:\n{text}"
-)
-
 
 def _load_safety():
-    global _safety_model, _safety_tokenizer
+    global _safety_model, _safety_processor
     if _safety_model is None:
-        import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer
-        _safety_tokenizer = AutoTokenizer.from_pretrained(SAFETY_MODEL)
-        _safety_model = AutoModelForCausalLM.from_pretrained(
+        import transformers
+        from transformers import AutoProcessor
+
+        for class_name in (
+            "Gemma3ForConditionalGeneration",
+            "AutoModelForImageTextToText",
+            "AutoModelForMultimodalLM",
+        ):
+            safety_model_cls = getattr(transformers, class_name, None)
+            if safety_model_cls is not None:
+                break
+        else:
+            raise ImportError("No compatible Transformers class for Nemotron content safety")
+
+        _safety_processor = AutoProcessor.from_pretrained(SAFETY_MODEL)
+        _safety_model = safety_model_cls.from_pretrained(
             SAFETY_MODEL,
             torch_dtype="auto",
             device_map="auto",
         )
         _safety_model.eval()
-    return _safety_model, _safety_tokenizer
+    return _safety_model, _safety_processor
 
 
-def safety_check(text: str) -> bool:
+def _make_safety_messages(response: str, user_prompt: str | None = None) -> list[dict]:
+    prompt = user_prompt or "The user asked a health assistant for help with health logging."
+    return [
+        {
+            "role": "user",
+            "content": [{"type": "text", "text": prompt[:800]}],
+        },
+        {
+            "role": "assistant",
+            "content": [{"type": "text", "text": response[:1600]}],
+        },
+    ]
+
+
+def _is_safety_output_safe(output: str) -> bool:
+    low = output.lower()
+    response_match = re.search(r"response\s+safety\s*:\s*(safe|unsafe)", low)
+    if response_match:
+        return response_match.group(1) == "safe"
+    if "unsafe" in low:
+        return False
+    return bool(re.search(r"\bsafe\b", low))
+
+
+def safety_check(text: str, user_prompt: str | None = None) -> bool:
     """Return True if text is safe to speak, False if it must be deflected."""
     try:
         import torch
-        model, tokenizer = _load_safety()
-        prompt = _SAFETY_PROMPT.format(text=text[:600])
-        messages = [{"role": "user", "content": prompt}]
-        inp = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        inputs = tokenizer(inp, return_tensors="pt").to(model.device)
+
+        model, processor = _load_safety()
+        messages = _make_safety_messages(text, user_prompt)
+        try:
+            inputs = processor.apply_chat_template(
+                messages,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt",
+                request_categories="/no_categories",
+            )
+        except TypeError:
+            inputs = processor.apply_chat_template(
+                messages,
+                add_generation_prompt=True,
+                tokenize=True,
+                return_dict=True,
+                return_tensors="pt",
+            )
+        if hasattr(inputs, "to"):
+            try:
+                inputs = inputs.to(model.device)
+            except Exception:
+                pass
+        input_len = inputs["input_ids"].shape[-1]
         with torch.no_grad():
             out = model.generate(
                 **inputs,
-                max_new_tokens=5,
+                max_new_tokens=80,
                 do_sample=False,
-                pad_token_id=tokenizer.eos_token_id,
             )
-        answer = tokenizer.decode(
-            out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
-        ).strip().upper()
-        return not answer.startswith("YES")
+        answer = processor.decode(out[0][input_len:], skip_special_tokens=True).strip()
+        return _is_safety_output_safe(answer)
     except Exception as exc:
-        print(f"Safety check failed: {exc} — allowing through", flush=True)
-        return True
+        print(f"Safety check failed: {exc} - deflecting", flush=True)
+        return False
 
 
 def _load():
@@ -79,6 +128,7 @@ def _load():
     if _model is None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
+
         _tokenizer = AutoTokenizer.from_pretrained(MINICPM_TEXT_MODEL)
         _model = AutoModelForCausalLM.from_pretrained(
             MINICPM_TEXT_MODEL,
@@ -105,13 +155,19 @@ def clean_ocr(raw_text: str) -> str:
 
 def complete(user_message: str, extra_system: str = "") -> str:
     import torch
+
     model, tokenizer = _load()
     system = SYSTEM_PROMPT + ("\n\n" + extra_system if extra_system else "")
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": user_message},
     ]
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True,
+        enable_thinking=False,
+    )
     inputs = tokenizer(text, return_tensors="pt").to(model.device)
     with torch.no_grad():
         outputs = model.generate(
@@ -123,4 +179,4 @@ def complete(user_message: str, extra_system: str = "") -> str:
         )
     new_tokens = outputs[0][inputs["input_ids"].shape[1]:]
     result = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-    return result if safety_check(result) else _DEFLECTION
+    return result if safety_check(result, user_message) else _DEFLECTION

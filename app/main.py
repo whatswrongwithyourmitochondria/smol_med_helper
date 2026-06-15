@@ -360,14 +360,14 @@ body, .gradio-container {
 /* ── Hero header ── */
 .app-header {
     text-align: center;
-    padding: 2.2rem 1rem 1.2rem;
-    margin-bottom: 1.4rem;
+    padding: 0.8rem 1rem 1.2rem;
+    margin-bottom: 1.2rem;
 }
 .app-title {
     font-family: 'Tomorrow', monospace;
-    font-size: clamp(2.25rem, 5.6vw, 3.25rem);
+    font-size: 4rem;
     font-weight: 700;
-    letter-spacing: 3px;
+    letter-spacing: 0;
     background: linear-gradient(95deg, #00d2ff 0%, #3a7bd5 48%, #c471ed 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -644,6 +644,9 @@ button.primary:active {
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
+    .app-title {
+        font-size: 2.75rem;
+    }
 }
 
 /* ── Secondary button ── */
@@ -780,10 +783,20 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     box-shadow: none !important;
     min-height: 0 !important;
     min-width: 0 !important;
-    padding: 0.35rem !important;
-    font-size: 0.95rem !important;
+    padding: 0.48rem !important;
+    font-size: 1.15rem !important;
     letter-spacing: 0 !important;
     line-height: 1.2 !important;
+}
+#checkin-audio button svg,
+#checkin-audio .controls svg,
+#checkin-audio .control-wrapper svg,
+#checkin-audio .settings-wrapper svg,
+#checkin-audio button.action.icon svg {
+    width: 1.45rem !important;
+    height: 1.45rem !important;
+    min-width: 1.45rem !important;
+    min-height: 1.45rem !important;
 }
 
 /* ── History placeholder / entries — align text inside its box ── */
@@ -797,7 +810,7 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     overflow-y: auto !important;
     resize: vertical !important;
 }
-/* Brief rendered as Markdown — expands fully, no inner scrollbars (page scrolls) */
+/* Brief rendered as Markdown — one outer scroll area, no nested scrollbars */
 .brief-box,
 .brief-box > *,
 .brief-box .prose,
@@ -807,6 +820,8 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
 }
 .brief-box {
     min-height: 160px !important;
+    max-height: 360px !important;
+    overflow-y: auto !important;
     padding: 8px 18px !important;
 }
 .brief-box h2 {
