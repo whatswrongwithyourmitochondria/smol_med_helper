@@ -472,10 +472,15 @@ button.selected.svelte-11gaq1::after {
 /* ── Cards / blocks ── */
 .block, .gr-group, .panel, .form {
     background: rgba(13, 21, 38, 0.72) !important;  /* semi-transparent so the heart pattern shows through */
-    backdrop-filter: blur(2px) !important;
-    -webkit-backdrop-filter: blur(2px) !important;
     border: 1px solid var(--border) !important;
     border-radius: 18px !important;
+}
+/* NB: no backdrop-filter here — blur() breaks webcam / <canvas> / image painting
+   in Chrome, which hid the captured photo in the Camera tab. */
+/* Image / webcam components render on a solid surface so the feed + captured
+   photo are always clearly visible. */
+.image-container, .image-frame, [data-testid="image"] {
+    background: var(--surface) !important;
 }
 
 /* ── Section hints ── */
