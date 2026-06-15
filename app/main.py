@@ -814,25 +814,68 @@ input[type=range] { accent-color: var(--cyan) !important; height: 6px !important
     min-width: max-content !important;
     z-index: 2 !important;
 }
+#checkin-audio .controls[data-testid="waveform-controls"],
+#checkin-audio .controls {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 18px !important;
+    width: 100% !important;
+}
+#checkin-audio .control-wrapper,
+#checkin-audio .play-pause-wrapper,
+#checkin-audio .settings-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+}
+#checkin-audio .control-wrapper {
+    justify-self: start !important;
+}
+#checkin-audio .play-pause-wrapper {
+    justify-self: center !important;
+}
+#checkin-audio .settings-wrapper {
+    justify-self: end !important;
+}
 /* Keep the playback control icons (volume / speed / reset / trim) as plain
    transparent icon buttons — no bordered boxes. */
 #checkin-audio .controls button,
 #checkin-audio .control-wrapper button,
+#checkin-audio .play-pause-wrapper button,
 #checkin-audio .settings-wrapper button,
 #checkin-audio button.action.icon {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    min-height: 0 !important;
-    min-width: 0 !important;
+    width: 2.45rem !important;
+    height: 2.45rem !important;
+    min-height: 2.45rem !important;
+    min-width: 2.45rem !important;
     padding: 0.48rem !important;
     font-size: 1.15rem !important;
     letter-spacing: 0 !important;
     line-height: 1.2 !important;
 }
+#checkin-audio .play-pause-button {
+    width: 3rem !important;
+    height: 3rem !important;
+    min-width: 3rem !important;
+    min-height: 3rem !important;
+}
+#checkin-audio .playback span {
+    display: block !important;
+    width: 100% !important;
+    text-align: center !important;
+    line-height: 1 !important;
+}
 #checkin-audio button svg,
 #checkin-audio .controls svg,
 #checkin-audio .control-wrapper svg,
+#checkin-audio .play-pause-wrapper svg,
 #checkin-audio .settings-wrapper svg,
 #checkin-audio button.action.icon svg {
     width: 1.45rem !important;
@@ -1108,8 +1151,8 @@ with gr.Blocks(title="Patient Scribe") as demo:
             gr.HTML(
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
-                'Press <strong style="color:#7a92aa;">Record</strong> and speak your check-in, '
-                'then <strong style="color:#7a92aa;">Stop</strong>.</p>'
+                'Press <strong style="color:#00d2ff;">Record</strong> and speak your check-in, '
+                'then <strong style="color:#00d2ff;">Stop</strong>.</p>'
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'Optionally attach a photo.</p>'
@@ -1237,7 +1280,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
             gr.HTML(
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 0.6rem 0;">'
-                'Generates a <strong style="color:#7a92aa;">change-focused brief</strong> '
+                'Generates a <strong style="color:#00d2ff;">change-focused brief</strong> '
                 'with six sections.</p>'
                 '<p style="text-align:center;color:#4d6a8a;font-size:0.93rem;'
                 'line-height:1.65;margin:0 0 1rem 0;">'
