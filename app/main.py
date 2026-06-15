@@ -583,6 +583,15 @@ button.primary:active {
     padding-right: 0 !important;
     font-size: 1rem !important;
 }
+.camera-actions .clear-photo-button {
+    flex: 1 1 0 !important;
+    max-width: none !important;
+}
+.camera-actions .clear-photo-button button {
+    font-size: 0.95rem !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+}
 .source-actions .upload-button,
 .source-actions .file-preview,
 .source-actions .wrap,
@@ -1064,7 +1073,7 @@ with gr.Blocks(title="Patient Scribe") as demo:
                 'line-height:1.65;margin:0 0 1rem 0;">'
                 'The model reads the text aloud and logs any numeric readings.</p>'
             )
-            with gr.Row(elem_classes=["source-actions"]):
+            with gr.Row(elem_classes=["source-actions", "camera-actions"]):
                 take_photo_btn = gr.Button(
                     "📷  Take a photo",
                     variant="secondary",
